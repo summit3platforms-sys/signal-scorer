@@ -115,6 +115,7 @@ export function updateSettings(newSettings) {
 
 export function insertSignals(signalsArray) {
   const conn = getDB();
+  const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
   const insert = conn.prepare(`
     INSERT OR REPLACE INTO signals 
     (id, symbol, direction, score, confidence, entry, tp1, tp2, stopLoss, status, createdAt, reasons, subScores)
@@ -123,8 +124,10 @@ export function insertSignals(signalsArray) {
 
   const insertMany = conn.transaction((signals) => {
     for (const sig of signals) {
+      // Stable ID: same symbol+direction within a 12-hour window → same row (prevents duplicates)
+      const epochBucket = Math.floor(sig.timestamp / TWELVE_HOURS_MS);
       insert.run({
-        id: `${sig.symbol}_${sig.timestamp}`,
+        id: `${sig.symbol}_${sig.direction}_${epochBucket}`,
         symbol: sig.symbol,
         direction: sig.direction,
         score: sig.score,

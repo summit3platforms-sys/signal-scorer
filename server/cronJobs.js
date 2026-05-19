@@ -1,6 +1,6 @@
 import cron from 'node-cron';
-import WebSocket from 'ws';
-import { getTopSymbolsByVolume, getMultipleKlines, getAllTickers, getCurrentWeight } from '../lib/binance.js'; // fetchLivePrices removed
+import { startPriceStream } from '../lib/priceStream.js';
+import { getTopSymbolsByVolume, getMultipleKlines, getAllTickers, getCurrentWeight } from '../lib/binance.js';
 import { SignalScoringEngine } from '../signal-engine/SignalScoringEngine.js';
 import { validateSignal } from '../lib/gemini.js';
 import { sendAlert } from '../lib/telegram.js';
@@ -135,43 +135,11 @@ export async function runFullScan(io) {
   } finally {
     isScanning = false;
   }
-}
-
 // ---------------------------------------------------------
-// NEW WEBSOCKET PRICE TRACKER ARCHITECTURE
+// PRICE TRACKING via centralized WebSocket module
 // ---------------------------------------------------------
 
-let ws;
-const priceCache = new Map();
 let lastEmitTime = 0;
-
-export function startPriceStream(io) {
-  ws = new WebSocket('wss://fstream.binance.com/ws/!miniTicker@arr');
-
-  ws.on('message', (data) => {
-    try {
-      const tickers = JSON.parse(data);
-      tickers.forEach(t => {
-        priceCache.set(t.s, parseFloat(t.c)); // t.s = symbol, t.c = close price
-      });
-
-      // Process database hit logic on new data
-      processPriceUpdate(io, priceCache);
-    } catch (err) {
-      console.error('[PriceStream] Parse error:', err.message);
-    }
-  });
-
-  ws.on('close', () => {
-    console.warn('[PriceStream] Closed. Reconnecting in 5s...');
-    setTimeout(() => startPriceStream(io), 5000);
-  });
-
-  ws.on('error', (err) => {
-    console.error('[PriceStream] Error:', err.message);
-    logError('PriceStream', err.message, err.stack);
-  });
-}
 
 function processPriceUpdate(io, prices) {
   try {
@@ -180,8 +148,9 @@ function processPriceUpdate(io, prices) {
     let statsChanged = false;
 
     for (const sig of activeSignals) {
-      const livePrice = prices.get(sig.symbol);
-      if (!livePrice) continue;
+      const priceData = prices.get(sig.symbol);
+      if (!priceData) continue;
+      const livePrice = priceData.price;
 
       // Expire signals older than 24 hours
       if (now - sig.createdAt > 24 * 60 * 60 * 1000) {
@@ -218,13 +187,11 @@ function processPriceUpdate(io, prices) {
     }
 
     if (io) {
-      // Throttle front-end emissions to ~2 seconds to avoid flooding UI clients, 
-      // while retaining real-time evaluation above.
+      // Throttle front-end emissions to ~2 seconds to avoid flooding UI clients
       if (now - lastEmitTime >= 2000) {
-        // Convert Map format safely back to original format expected by the UI: { SYMBOL: { price: X } }
         const pricesObj = {};
-        for (const [sym, price] of prices.entries()) {
-          pricesObj[sym] = { price };
+        for (const [sym, data] of prices.entries()) {
+          pricesObj[sym] = data;
         }
         io.emit('price:update', pricesObj);
         lastEmitTime = now;
@@ -251,9 +218,9 @@ export function initCronJobs(io) {
 
   console.log('[Cron] Scheduled: 5-min full scan.');
 
-  // Initialize zero-cost WebSocket pricing instead of REST polling
+  // Initialize zero-cost WebSocket pricing via the centralized module
   console.log('[Stream] Starting WebSocket live price stream...');
-  startPriceStream(io);
+  startPriceStream((priceMap) => processPriceUpdate(io, priceMap));
 
   // Initial scan after a 5-second delay to let the server fully start
   setTimeout(() => {

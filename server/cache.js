@@ -1,4 +1,4 @@
-import { insertSignals, getHistoricalStats, getActiveSignals, getSettings } from './services/database.js';
+import { insertSignals, getHistoricalStats, getActiveSignals, getSettings, getRecentSignalKeys } from './services/database.js';
 
 const store = {
   signals: [],
@@ -82,13 +82,18 @@ export function setSignals(results, meta) {
   store.totalPairs = meta.totalPairs;
   store.scanDurationMs = meta.scanDurationMs;
 
-  // Persist signals above configured minScore directly into the database
+  // Persist only NEW signals above configured minScore
+  // Skip signals that already exist in the 12h dedup window to avoid unnecessary DB writes
   const dbSettings = getSettings();
   const minPersistenceScore = dbSettings.minScore ?? 60;
+  const recentKeys = getRecentSignalKeys(12 * 60 * 60 * 1000);
 
-  const actionableSignals = results.filter(s => s.score >= minPersistenceScore);
-  if (actionableSignals.length > 0) {
-    insertSignals(actionableSignals);
+  const newSignals = results.filter(s => 
+    s.score >= minPersistenceScore && !recentKeys.has(s.symbol)
+  );
+
+  if (newSignals.length > 0) {
+    insertSignals(newSignals);
   }
 
   // Update in-memory stats wrapper
