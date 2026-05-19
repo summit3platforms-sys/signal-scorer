@@ -13,7 +13,10 @@ const store = {
   }
 };
 
-export function getSignals({ direction, minScore = 60, limit = 200 } = {}) {
+export function getSignals({ direction, minScore, limit = 200 } = {}) {
+  const dbSettings = getSettings();
+  const effectiveMinScore = minScore !== undefined ? Number(minScore) : (dbSettings.minScore ?? 60);
+
   // 1. Get active database signals (long-term persistent trades)
   const dbActiveRaw = getActiveSignals();
   
@@ -59,8 +62,8 @@ export function getSignals({ direction, minScore = 60, limit = 200 } = {}) {
     mergedSignals = mergedSignals.filter(s => s.direction === direction.toUpperCase());
   }
   
-  if (minScore !== undefined) {
-    mergedSignals = mergedSignals.filter(s => s.score >= Number(minScore));
+  if (effectiveMinScore !== undefined) {
+    mergedSignals = mergedSignals.filter(s => s.score >= effectiveMinScore);
   }
   
   return {
