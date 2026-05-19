@@ -1,6 +1,6 @@
 ==================================================
 PROJECT: Signal Scorer Pro
-LAST UPDATED: 2026-05-19 19:15:00 IST
+LAST UPDATED: 2026-05-19 19:25:00 IST
 ==================================================
 
 CURRENT TECH STACK
@@ -234,7 +234,7 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 14. TWO-STAGE ACTIVE SIGNAL STATE MACHINE: Migrated database schema to support `tp1Hit` column. Refactored `updateSignalStatus` in `database.js` and `processPriceUpdate` in `cronJobs.js` so that hitting TP1 transitions the active signal stopLoss to the entry level (breakeven) to lock in gains and keeps it active on the dashboard. Prevents multiple re-triggers, and ensures returning to breakeven records maxProfitPct as 0 instead of negative. Replaced `getHistoricalStats` to calculate per-target accuracy ratios and overall trading Expectancy (R).
 15. PREMIUM DASHBOARD METRICS INTERFACE: Replaced the standard 4-stat stats-row with an advanced 6-card dashboard surfacing Total Signals, Long/Short split, TP1 Touch Rate, TP2 Hit Rate, Stop Losses count, and R Expectancy. Augmented individual `SignalCard` and `SignalDetail` modals with dynamic multi-colored indicator badges (4H Bias, Empirical 30d Win Rate, Active TP1/Breakeven flags) and real-time percentage distance distance metrics from entry.
 16. DYNAMIC DASHBOARD PARAMETERS & COOLDOWNS: Integrated dynamic controls in the settings tab for the 30-minute signal cooldown period, and ATR multipliers (Stop Loss, Take Profit 1, Take Profit 2). Programmed automatic seeding on startup, dynamic lookup within the `insertSignals` block, and active parameter override injection in the `SignalScoringEngine` constructor.
-
+17. COMPREHENSIVE ERROR COVERAGE LOGS: Extended the global `logError()` pipeline directly into the Binance API retry mechanisms and symbol klines fetching catch boundaries. Every transient warning, rate limit warning, or symbol API timeout is now securely cataloged into the SQLite database and instantly populated on the dashboard.
 ==================================================
 TODO FEATURES
 --------------------------------------------------
