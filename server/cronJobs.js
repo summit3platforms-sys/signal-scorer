@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { startPriceStream } from '../lib/priceStream.js';
+import { startPriceStream, getStreamReadyState } from '../lib/priceStream.js';
 import { getTopSymbolsByVolume, getMultipleKlines, getAllTickers, getCurrentWeight } from '../lib/binance.js';
 import { SignalScoringEngine } from '../signal-engine/SignalScoringEngine.js';
 import { validateSignal } from '../lib/gemini.js';
@@ -146,7 +146,7 @@ export async function runFullScan(io) {
 
     if (io) {
       const { signals, stats } = getSignals();
-      io.emit('signals:update', { signals, scannedAt: meta.scannedAt, totalPairs, stats });
+      io.emit('signals:update', { signals, scannedAt: meta.scannedAt, totalPairs, stats, meta });
     }
 
     const weight = getCurrentWeight();
@@ -243,7 +243,8 @@ function processPriceUpdate(io, prices) {
           signals,
           scannedAt: meta?.scannedAt,
           totalPairs: meta?.totalPairs,
-          stats
+          stats,
+          meta
         });
       }
     }
@@ -272,8 +273,20 @@ export function initCronJobs(io) {
   console.log('[Stream] Starting WebSocket live price stream...');
   startPriceStream((priceMap) => processPriceUpdate(io, priceMap));
 
+  // Run cleanup once on startup before scanning
+  try {
+    deleteExpiredSignals(7);
+    console.log('[Cron] Startup signal expiry cleanup executed successfully.');
+  } catch (err) {
+    console.error('[Cron] Startup signal cleanup failed:', err.message);
+  }
+
   // Initial scan after a 5-second delay to let the server fully start
   setTimeout(() => {
     runFullScan(io).catch(err => console.error('[Cron] Initial scan error:', err.message));
   }, 5000);
+}
+
+export function getStreamStatus() {
+  return getStreamReadyState();
 }

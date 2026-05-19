@@ -26,7 +26,7 @@ export const useSignalStore = create((set, get) => ({
   stats: { totalSignals: 0, accuracy: 0, tp1TouchRate: 0, tp2HitRate: 0, stopLosses: 0, expectancy: 0 },
   filters: { direction: 'ALL', minScore: 60, timeframe: '15m', search: '' },
   prices: {},
-  scanStatus: { isScanning: false, lastScanAt: null, totalPairs: 0, countdown: 300 },
+  scanStatus: { isScanning: false, lastScanAt: null, totalPairs: 0, countdown: 300, scanDurationMs: 0 },
   isConnected: false,
   socket: null,
   error: null,
@@ -214,7 +214,7 @@ export const useSignalStore = create((set, get) => ({
       set({ isConnected: false, error: 'Backend not reachable. Start the Express server.' });
     });
 
-    socket.on('signals:update', ({ signals, scannedAt, totalPairs, stats }) => {
+    socket.on('signals:update', ({ signals, scannedAt, totalPairs, stats, meta }) => {
       const filters = get().filters;
       const filtered = applyFilters(signals || [], filters);
       set(state => ({
@@ -224,6 +224,7 @@ export const useSignalStore = create((set, get) => ({
         scanStatus: {
           ...state.scanStatus,
           lastScanAt: scannedAt,
+          scanDurationMs: meta?.scanDurationMs || state.scanStatus.scanDurationMs || 0,
           totalPairs: totalPairs !== undefined && totalPairs !== null ? totalPairs : state.scanStatus.totalPairs,
           isScanning: false,
           countdown: 300

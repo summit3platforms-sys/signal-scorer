@@ -142,8 +142,8 @@ export default function SignalCard({ signal, livePrice }) {
 
           {/* TP1 already hit badge */}
           {signal.tp1Hit === 1 && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-950 text-yellow-400 border border-yellow-800/45 animate-pulse">
-              TP1 hit — breakeven SL
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#3d2f00] text-[#ffd700] border border-[#b8860b]/45 animate-pulse">
+              TP1 ✓ (SL @ Breakeven)
             </span>
           )}
         </div>

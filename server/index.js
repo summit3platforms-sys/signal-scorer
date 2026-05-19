@@ -78,7 +78,8 @@ io.on('connection', (socket) => {
     signals: data.signals,
     scannedAt: data.meta?.scannedAt,
     totalPairs: data.meta?.totalPairs,
-    stats: data.stats
+    stats: data.stats,
+    meta: data.meta
   });
   socket.on('disconnect', () => {
     console.log(`[Socket] Client disconnected: ${socket.id}`);

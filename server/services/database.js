@@ -64,6 +64,7 @@ export function initDB() {
     );
 
     CREATE INDEX IF NOT EXISTS idx_status ON signals(status);
+    CREATE INDEX IF NOT EXISTS idx_symbol_status ON signals(symbol, status);
     CREATE INDEX IF NOT EXISTS idx_created_at ON signals(createdAt);
     CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON error_logs(timestamp);
   `);

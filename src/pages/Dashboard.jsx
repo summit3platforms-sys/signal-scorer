@@ -77,6 +77,7 @@ export default function Dashboard() {
 
             <span className="text-xs text-gray-500 font-mono hidden sm:inline">
               Last scan: {formatLastScan(scanStatus.lastScanAt)}
+              {scanStatus.scanDurationMs > 0 && ` (took ${Math.round(scanStatus.scanDurationMs / 1000)}s)`}
             </span>
 
             {scanStatus.totalPairs > 0 && (

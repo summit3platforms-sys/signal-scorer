@@ -1,12 +1,19 @@
 import express from 'express';
 import { getDB } from '../services/database.js';
 import { binanceBreaker, geminiBreaker } from '../../lib/circuitBreaker.js';
+import { getStreamStatus } from '../cronJobs.js';
 
 const router = express.Router();
 
 router.get('/', async (req, res) => {
+  const readyState = getStreamStatus();
+  let priceStreamStatus = 'DISCONNECTED';
+  if (readyState === 1) priceStreamStatus = 'CONNECTED';
+  else if (readyState === 0) priceStreamStatus = 'CONNECTING';
+
   const health = {
     status: 'ok',
+    priceStream: priceStreamStatus,
     services: {
       database: { status: 'unknown', message: '' },
       binance: { status: 'unknown', message: '' },
