@@ -21,16 +21,16 @@ echo "[1/4] Pulling latest from GitHub..."
 git pull origin main
 echo "      ✅ Code updated"
 
-# 2. Install/update dependencies
+# 2. Install/update dependencies (override NODE_ENV so devDeps like vite are included)
 echo ""
 echo "[2/4] Installing dependencies..."
-npm install 2>&1 | tail -3
+NODE_ENV=development npm install 2>&1 | tail -3
 echo "      ✅ Dependencies installed"
 
 # 3. Build frontend
 echo ""
 echo "[3/4] Building frontend..."
-npm run build
+npx vite build
 echo "      ✅ Frontend built"
 
 # 4. Restart PM2
