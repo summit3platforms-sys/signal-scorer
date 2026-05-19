@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables (NEVER commit these)
+.env
+.env.production
+.env.local
+
+# Database (server creates its own)
+signal-scorer.db
+signal-scorer.db-shm
+signal-scorer.db-wal
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# PM2
+.pm2/
+
+# Test files
+test-*.js
+testBinance*.js
+testTelegram.js

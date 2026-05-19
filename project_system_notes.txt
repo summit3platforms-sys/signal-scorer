@@ -1,0 +1,219 @@
+==================================================
+PROJECT: Signal Scorer Pro
+LAST UPDATED: 2026-05-18 22:18:00 IST
+==================================================
+
+CURRENT TECH STACK
+--------------------------------------------------
+Frontend:
+- React 18 (UI Library)
+- Vite 5 (Build Tool & Dev Server)
+- TailwindCSS 3 (Styling & Dark Terminal Theme)
+- Zustand (Global State Management)
+- Lucide React (Icons)
+
+Backend:
+- Node.js 20 (Runtime)
+- Express 4 (REST API Server)
+- Socket.io 4 (Real-time WebSocket communication)
+- Node-Cron (Background scheduling)
+- ws (Native WebSocket client for Binance price stream)
+
+Database:
+- better-sqlite3 (Ultra-fast, zero-config embedded SQL database)
+- Tuned with: WAL mode, NORMAL sync, 64MB cache, MEMORY temp store
+
+Integrations:
+- Binance USDT Futures API (Public REST + WebSocket streams)
+- Telegram Bot API (telegraf library)
+- Google Gemini AI (gemini-1.5-flash for signal validation)
+
+Fault Tolerance:
+- CircuitBreaker pattern on Binance & Gemini API calls
+- Exponential backoff reconnection on WebSocket drops
+- Concurrency limiter (pLimit) for kline batch fetches
+
+==================================================
+SYSTEM ARCHITECTURE
+--------------------------------------------------
+
+[ Binance WS ] =====(wss://fstream.binance.com)=====> [ priceStream.js ] (0 cost, 1s tick)
+                                                              |
+                                                              v
+[ Binance REST ] <---(HTTP GET / pLimit)--- [ Node/Express cronJobs.js ] <---(Socket.io)---> [ React Frontend ]
+                                                              |
+                                                              v
+                                                     [ SQLite (WAL Mode) ]
+                                                              |
+                                                              v
+                                                   [ Telegram & Gemini AI ]
+
+Architecture Flow:
+1. priceStream.js maintains a single persistent WebSocket to Binance Futures miniTicker stream, maintaining a sub-second in-memory live price cache of all USDT perpetuals for zero API weight cost.
+2. cronJobs.js wakes up every 5 minutes and calls Binance REST via binanceBreaker (Circuit Breaker) for the Top 150 pairs.
+3. It fetches 15m and 1h candlestick data in batches using a concurrency limiter (pLimit) to prevent rate limit limits.
+4. The data is fed into SignalScoringEngine.js.
+5. The Engine scores each pair using statistically decorrelated weights, volume Z-scores, and ATR-based dynamic TP/SL levels. Ranging markets are skipped entirely via the ADX regime filter.
+6. Signals matching settings.minScore are instantly persisted to SQLite database (optimized with WAL mode + Normal sync to prevent write contention) and high-confidence signals are validated by Gemini AI via geminiBreaker.
+7. The Backend broadcasts the new signals via Socket.io to the Frontend.
+8. The Backend sends Telegram alerts for signals with Score >= 75.
+9. Every 5 seconds, cronJobs.js evaluates active database signals against the local WebSocket price cache (zero API calls).
+10. If TP/SL is hit, the database marks the signal as WIN/LOSS and updates the Win Rate on the frontend.
+
+==================================================
+API ENDPOINTS
+--------------------------------------------------
+1. GET /api/meta
+   - Returns basic server health and version info.
+2. POST /api/scan
+   - Manually triggers a fresh Binance market scan.
+3. GET /api/signals
+   - Returns the latest signals from the cache.
+4. GET /api/signals/history
+   - Returns all closed historical signals.
+5. GET /api/system-notes
+   - Returns project documentation contents.
+6. GET /api/settings & POST /api/settings
+   - Fetches and updates dynamic AI engine weights.
+7. GET /api/health
+   - Verifies Binance API, SQLite, Telegram, and Gemini status, including Circuit Breaker states.
+8. POST /api/telegram/broadcast
+   - Broadcasts a custom HTML announcement to Telegram channels.
+9. GET /api/logs & DELETE /api/logs
+   - Fetches and clears persistent SQLite system exceptions and logs.
+10. POST /api/logs/test
+    - Simulates a diagnostics system exception for testing.
+11. POST /api/webhook
+    - (Production only) Receives incoming messages from Telegram.
+
+==================================================
+FEATURE: System Error Logs
+
+Backend:
+
+SQLite table 'error_logs' tracking exceptions.
+Custom 'logError' helper integrated across Binance, Gemini AI, Scanner, and PriceTracker.
+Exposes rich API endpoints for frontend log retrieval.
+
+Frontend:
+
+Dedicated 'Error Logs' Tab on Dashboard.
+Displays errors with contextual tags, timestamps, and expandable stack traces.
+Features 'Simulate Error' to trigger instant diagnostic logging and verification.
+Features 'Clear Logs' for single-click maintenance.
+
+==================================================
+DATABASE TABLES (SQLite)
+--------------------------------------------------
+Table: signals
+Stores every high-confidence trading signal to track its performance.
+
+Columns:
+- id (Primary Key, format: SYMBOL_TIMESTAMP)
+- symbol (e.g. BTCUSDT)
+- direction (LONG or SHORT)
+- score (0 to 100)
+- confidence (LOW, MEDIUM, HIGH, VERY_HIGH)
+- entry (Price at time of signal)
+- tp1, tp2, stopLoss (Calculated price targets)
+- status (ACTIVE, WIN_TP1, WIN_TP2, LOSS_SL, EXPIRED)
+- createdAt, closedAt (Unix timestamps)
+- maxProfitPct (Maximum profit percentage achieved)
+- reasons, subScores (JSON strings of engine data)
+
+Table: settings
+Stores dynamic AI Engine weights and configuration limits.
+Columns:
+- key (Primary Key, e.g., "emaAlignment")
+- value (e.g., "0.25")
+
+==================================================
+DEPLOYMENT PROCESS
+--------------------------------------------------
+1. Clone repository to VPS.
+2. Run `npm install` to install dependencies (compiles better-sqlite3).
+3. Copy `.env.example` to `.env` and fill in keys.
+4. Run `npm run build` to compile the Vite frontend into the `/dist` folder.
+5. Use PM2 to run the server in production: `NODE_ENV=production pm2 start server/index.js`
+   (In production, Express serves the API on port 8080 AND serves the frontend UI from `/dist` on the same port).
+6. Configure Nginx reverse proxy to point to port 8080 and attach SSL.
+
+==================================================
+ENVIRONMENT VARIABLES & PORTS
+--------------------------------------------------
+Ports (Dev Mode):
+- Backend API: 8080
+- Frontend Vite UI: 8081
+
+Environment Variables (.env):
+- NODE_ENV (development / production)
+- PORT (Backend port, default 8080)
+- BINANCE_API_KEY / BINANCE_SECRET_KEY (For future authenticated endpoints)
+- TELEGRAM_BOT_TOKEN (From @BotFather)
+- TELEGRAM_CHAT_IDS (Channel IDs to broadcast to)
+- GEMINI_API_KEY (For AI validation)
+- VITE_SOCKET_URL (http://localhost:8080 in dev, empty in prod)
+
+==================================================
+KNOWN ISSUES
+--------------------------------------------------
+- Binance IP Rate Limits: If the scan frequency is too high or the batch size too large, Binance returns HTTP 418 (IP Banned). Mitigated by 5-min intervals and 150-pair limits.
+- MacOS Port Binding (EPERM): Sandbox constraints on macOS sometimes prevent automated tools from binding to ports. Users must run `npm run dev` locally.
+
+==================================================
+COMPLETED FEATURES
+--------------------------------------------------
+
+FEATURE: AI Signal Scoring Engine
+Backend:
+- `SignalScoringEngine.js` evaluates 5 weighted factors.
+- Calculates dynamic TP1/TP2/SL based on ATR (Average True Range).
+Flow: Candlesticks -> Engine -> Numeric Score (0-100) -> Signal Object
+
+FEATURE: Real-Time UI Dashboard
+Frontend:
+- Built with React and Tailwind CSS.
+- Uses Zustand to manage global state and WebSocket connections.
+- Displays glowing animated rings, scrolling tickers, and glassmorphic cards.
+Flow: Backend -> Socket.io -> Zustand Store -> React Components
+
+FEATURE: Telegram Broadcasting
+Backend:
+- Uses `telegraf` library.
+- Formats signals into an easy-to-read HTML block with emojis.
+- Deduplicates alerts so the same pair isn't spammed within 30 minutes.
+Flow: Signal Generated -> Check Score >= 75 -> Format HTML -> Send to Telegram API
+
+FEATURE: SQLite Persistence & Win-Rate Tracking
+Backend:
+- `better-sqlite3` records all signals into `signal-scorer.db`.
+- 10-second price loop evaluates active signals against live prices.
+- Automatically closes signals as WIN or LOSS when price crosses TP/SL targets.
+Flow: Live Price Tick -> SQLite Query -> Compare Entry/TP/SL -> Update DB Status -> Emit updated Win Rate to Frontend.
+
+FEATURE: Trade History Dashboard
+Frontend:
+- `HistoryTable.jsx` displays closed trades.
+- `Dashboard.jsx` handles tab toggling between Active and History.
+- Fetches from `GET /api/signals/history`.
+Flow: User clicks Tab -> Zustand `fetchHistory` -> API -> SQLite Query -> React UI
+
+FEATURE: System Notes UI
+Frontend/Backend:
+- Backend exposes `GET /api/system-notes` which reads `project_system_notes.txt`.
+- Frontend `Dashboard.jsx` has a "System Notes" tab to render the content in real-time.
+Flow: User clicks Tab -> Zustand `fetchSystemNotes` -> API (`fs.readFileSync`) -> React UI `<pre>` block
+
+FEATURE: System Health & AI Parameter Engine
+Backend:
+- `health.js` route dynamically tests external API dependencies.
+- `settings.js` handles persistent SQLite parameters for the scoring engine.
+Frontend:
+- System Health Tab visually displays ping/status for Binance, SQLite, Telegram.
+- Settings Tab provides sliders to hot-swap engine calculation weights.
+
+==================================================
+TODO FEATURES
+--------------------------------------------------
+- Database: Implement a cleanup job to delete EXPIRED signals older than 7 days to save space.
+- Binance: Add automated trade execution (via authenticated API keys) based on the generated signals.
