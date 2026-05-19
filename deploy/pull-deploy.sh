@@ -24,7 +24,7 @@ echo "      ✅ Code updated"
 # 2. Install/update dependencies
 echo ""
 echo "[2/4] Installing dependencies..."
-npm ci --omit=dev 2>&1 | tail -3
+npm install 2>&1 | tail -3
 echo "      ✅ Dependencies installed"
 
 # 3. Build frontend
