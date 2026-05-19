@@ -62,9 +62,21 @@ export async function runFullScan(io) {
     }
 
     const rawResults = engine.scoreMultiple(symbols, candleMap);
-    const scored = rawResults.filter(s => s && s.score >= engine.getConfig().thresholds.minScore);
 
-    const actionable = [...scored];
+    // DEBUG — remove after diagnosis
+    console.log(`[Debug] Raw scored results: ${rawResults.length}`);
+    console.log(`[Debug] Null results (filtered by engine): ${symbols.length - rawResults.length}`);
+    console.log(`[Debug] Engine minScore threshold: ${engine.getConfig().thresholds.minScore}`);
+
+    const actionable = rawResults.filter(s => s && s.score >= engine.getConfig().thresholds.minScore);
+
+    // DEBUG — remove after diagnosis
+    console.log(`[Debug] Actionable after minScore filter: ${actionable.length}`);
+    if (rawResults.length > 0) {
+      const sample = rawResults.slice(0, 3).map(s => `${s.symbol} score:${s.score} dir:${s.direction}`);
+      console.log(`[Debug] Sample scores: ${sample.join(' | ')}`);
+    }
+
     actionable.sort((a, b) => b.score - a.score);
 
     // Step 5: Get tickers for price/volume enrichment (single bulk call — already cached)
