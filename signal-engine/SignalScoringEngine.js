@@ -97,6 +97,11 @@ export class SignalScoringEngine {
       if (dbSettings.bollingerPos) this.config.weights.structure = parseFloat(dbSettings.bollingerPos);
       if (dbSettings.macdMomentum) this.config.weights.pattern = parseFloat(dbSettings.macdMomentum);
       if (dbSettings.minScore) this.config.thresholds.minScore = parseFloat(dbSettings.minScore);
+
+      // Inject dynamic ATR multipliers if present
+      if (dbSettings.atrStopLoss) this.config.atrMultipliers.stopLoss = parseFloat(dbSettings.atrStopLoss);
+      if (dbSettings.atrTakeProfit1) this.config.atrMultipliers.takeProfit1 = parseFloat(dbSettings.atrTakeProfit1);
+      if (dbSettings.atrTakeProfit2) this.config.atrMultipliers.takeProfit2 = parseFloat(dbSettings.atrTakeProfit2);
     }
   }
 

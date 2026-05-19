@@ -12,7 +12,11 @@ export default function SettingsTab() {
     volumeSurge: 0.15,
     bollingerPos: 0.10,
     atrFilter: 0.10,
-    minScore: 60
+    minScore: 60,
+    cooldownMinutes: 30,
+    atrStopLoss: 2.0,
+    atrTakeProfit1: 2.5,
+    atrTakeProfit2: 4.5
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -113,8 +117,9 @@ export default function SettingsTab() {
 
         {/* Right Column: General Thresholds */}
         <div className="space-y-6">
-          <h3 className="text-lg font-bold text-gray-300 border-b border-[#1e2d40] pb-2">Global Thresholds</h3>
+          <h3 className="text-lg font-bold text-gray-300 border-b border-[#1e2d40] pb-2">Engine Settings & Cooldowns</h3>
           
+          {/* Min Score */}
           <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
             <div className="flex justify-between mb-2">
               <label className="text-sm font-medium text-gray-300">Minimum Signal Score</label>
@@ -131,6 +136,86 @@ export default function SettingsTab() {
             />
             <p className="text-xs text-gray-500 mt-2">
               Only signals scoring above this threshold will be tracked, saved, and alerted.
+            </p>
+          </div>
+
+          {/* Cooldown minutes */}
+          <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+            <div className="flex justify-between mb-2">
+              <label className="text-sm font-medium text-gray-300">Signal Cooldown Period</label>
+              <span className="text-sm font-bold text-[#00d4aa]">{localSettings.cooldownMinutes ?? 30} mins</span>
+            </div>
+            <input
+              type="range"
+              min="5"
+              max="720"
+              step="5"
+              value={localSettings.cooldownMinutes ?? 30}
+              onChange={(e) => handleChange('cooldownMinutes', e.target.value)}
+              className="w-full accent-[#00d4aa]"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Prevents duplicate signals for the same trading pair from re-firing within this timeframe.
+            </p>
+          </div>
+
+          {/* ATR Stop Loss multiplier */}
+          <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+            <div className="flex justify-between mb-2">
+              <label className="text-sm font-medium text-gray-300">ATR Stop Loss Multiplier</label>
+              <span className="text-sm font-bold text-[#00d4aa]">{localSettings.atrStopLoss ?? 2.0}x ATR</span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="5.0"
+              step="0.1"
+              value={localSettings.atrStopLoss ?? 2.0}
+              onChange={(e) => handleChange('atrStopLoss', e.target.value)}
+              className="w-full accent-[#00d4aa]"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Width of the stop-loss level computed relative to Average True Range volatility.
+            </p>
+          </div>
+
+          {/* ATR TP1 multiplier */}
+          <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+            <div className="flex justify-between mb-2">
+              <label className="text-sm font-medium text-gray-300">ATR Take Profit 1 Multiplier</label>
+              <span className="text-sm font-bold text-[#00d4aa]">{localSettings.atrTakeProfit1 ?? 2.5}x ATR</span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="10.0"
+              step="0.1"
+              value={localSettings.atrTakeProfit1 ?? 2.5}
+              onChange={(e) => handleChange('atrTakeProfit1', e.target.value)}
+              className="w-full accent-[#00d4aa]"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Distance to Take Profit Target 1 (triggers half-exit and breakeven SL adjust).
+            </p>
+          </div>
+
+          {/* ATR TP2 multiplier */}
+          <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+            <div className="flex justify-between mb-2">
+              <label className="text-sm font-medium text-gray-300">ATR Take Profit 2 Multiplier</label>
+              <span className="text-sm font-bold text-[#00d4aa]">{localSettings.atrTakeProfit2 ?? 4.5}x ATR</span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="15.0"
+              step="0.1"
+              value={localSettings.atrTakeProfit2 ?? 4.5}
+              onChange={(e) => handleChange('atrTakeProfit2', e.target.value)}
+              className="w-full accent-[#00d4aa]"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Distance to final Take Profit Target 2 (closes signal completely).
             </p>
           </div>
         </div>

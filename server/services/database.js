@@ -79,23 +79,26 @@ export function initDB() {
     db.exec(`ALTER TABLE signals ADD COLUMN tp1Hit INTEGER DEFAULT 0`);
   } catch (err) {}
 
-  const hasSettings = db.prepare(`SELECT COUNT(*) as c FROM settings`).get().c;
-  if (hasSettings === 0) {
-    const defaults = {
-      emaAlignment: '0.25',
-      rsiZone: '0.20',
-      macdMomentum: '0.20',
-      volumeSurge: '0.15',
-      bollingerPos: '0.10',
-      atrFilter: '0.10',
-      minScore: '60'
-    };
-    const insert = db.prepare(`INSERT INTO settings (key, value) VALUES (?, ?)`);
-    const tx = db.transaction(() => {
-      for (const [k, v] of Object.entries(defaults)) insert.run(k, v);
-    });
-    tx();
-  }
+  // Seed settings if missing
+  const seedSettings = {
+    emaAlignment: '0.25',
+    rsiZone: '0.20',
+    macdMomentum: '0.20',
+    volumeSurge: '0.15',
+    bollingerPos: '0.10',
+    atrFilter: '0.10',
+    minScore: '60',
+    cooldownMinutes: '30',
+    atrStopLoss: '2.0',
+    atrTakeProfit1: '2.5',
+    atrTakeProfit2: '4.5'
+  };
+
+  const insert = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
+  const tx = db.transaction(() => {
+    for (const [k, v] of Object.entries(seedSettings)) insert.run(k, v);
+  });
+  tx();
 
   console.log('[Database] SQLite initialized at:', dbPath);
   
@@ -137,10 +140,11 @@ export function updateSettings(newSettings) {
 
 export function insertSignals(signalsArray) {
   const conn = getDB();
+  const settings = getSettings();
 
-  // Block the same symbol from re-firing within 30 minutes
-  // This prevents spam without blocking legitimate new signals after TP/SL closes
-  const cooldownMs = 30 * 60 * 1000;
+  // Block the same symbol from re-firing within the configured cooldown minutes
+  const cooldownMinutes = settings.cooldownMinutes ?? 30;
+  const cooldownMs = cooldownMinutes * 60 * 1000;
   const cutoff = Date.now() - cooldownMs;
 
   const recentSymbols = new Set(
