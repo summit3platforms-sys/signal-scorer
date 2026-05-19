@@ -231,6 +231,7 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 11. R:R NOTATION ALIGNMENT: Aligned all occurrences of the Risk-to-Reward ratio to use standard `R:R` notation instead of `R/R` uniformly across the Telegram alert templates, Gemini AI validator prompts, and frontend Signal Cards for premium branding.
 12. ROBUST ATR SCORING MULTIPLIERS: Optimized default ATR trade parameters (Stop Loss widened to 2.0x, TP1 expanded to 2.5x, TP2 expanded to 4.5x) inside `SignalScoringEngine.js` to mitigate premature noise stop-outs and accommodate market swing tolerances.
 13. REMOVAL OF 12-HOUR COOL-OFF LIMIT: Completely removed the 12-hour scanner cool-off limit from `cronJobs.js` to allow highly conformed concurrent signals to pop up repeatedly whenever conditions and parameter rules align perfectly.
+14. TWO-STAGE ACTIVE SIGNAL STATE MACHINE: Migrated database schema to support `tp1Hit` column. Refactored `updateSignalStatus` so that hitting TP1 transitions the signal stopLoss to the entry level (breakeven) to lock in gains and keeps it active. Replaced `getHistoricalStats` to calculate per-target accuracy ratios and overall trading Expectancy (R).
 
 ==================================================
 TODO FEATURES

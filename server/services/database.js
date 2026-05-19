@@ -43,6 +43,7 @@ export function initDB() {
       createdAt INTEGER NOT NULL,
       closedAt INTEGER,
       maxProfitPct REAL DEFAULT 0,
+      tp1Hit INTEGER DEFAULT 0,
       reasons TEXT,
       subScores TEXT,
       historicalWinRate REAL,
@@ -73,6 +74,9 @@ export function initDB() {
   } catch (err) {}
   try {
     db.exec(`ALTER TABLE signals ADD COLUMN historicalSampleSize INTEGER`);
+  } catch (err) {}
+  try {
+    db.exec(`ALTER TABLE signals ADD COLUMN tp1Hit INTEGER DEFAULT 0`);
   } catch (err) {}
 
   const hasSettings = db.prepare(`SELECT COUNT(*) as c FROM settings`).get().c;
@@ -149,8 +153,8 @@ export function insertSignals(signalsArray) {
 
   const insert = conn.prepare(`
     INSERT OR REPLACE INTO signals 
-    (id, symbol, direction, score, confidence, entry, tp1, tp2, stopLoss, status, createdAt, reasons, subScores, historicalWinRate, historicalSampleSize)
-    VALUES (@id, @symbol, @direction, @score, @confidence, @entry, @tp1, @tp2, @stopLoss, @status, @createdAt, @reasons, @subScores, @historicalWinRate, @historicalSampleSize)
+    (id, symbol, direction, score, confidence, entry, tp1, tp2, stopLoss, status, tp1Hit, createdAt, reasons, subScores, historicalWinRate, historicalSampleSize)
+    VALUES (@id, @symbol, @direction, @score, @confidence, @entry, @tp1, @tp2, @stopLoss, @status, @tp1Hit, @createdAt, @reasons, @subScores, @historicalWinRate, @historicalSampleSize)
   `);
 
   const insertMany = conn.transaction((signals) => {
@@ -166,6 +170,7 @@ export function insertSignals(signalsArray) {
         tp2: sig.tp2,
         stopLoss: sig.stopLoss,
         status: 'ACTIVE',
+        tp1Hit: 0,
         createdAt: sig.timestamp,
         reasons: JSON.stringify(sig.reasons),
         subScores: JSON.stringify(sig.subScores),
@@ -222,11 +227,28 @@ export function getActiveSignals() {
 
 export function updateSignalStatus(id, status, closedAt, maxProfitPct = 0) {
   const conn = getDB();
-  conn.prepare(`
-    UPDATE signals 
-    SET status = ?, closedAt = ?, maxProfitPct = ?
-    WHERE id = ?
-  `).run(status, closedAt, maxProfitPct, id);
+
+  if (status === 'WIN_TP1') {
+    // TP1 hit — mark tp1Hit, move stopLoss to entry (breakeven), do NOT close
+    const signal = conn.prepare(`SELECT entry FROM signals WHERE id = ?`).get(id);
+    if (signal) {
+      conn.prepare(`
+        UPDATE signals
+        SET tp1Hit = 1,
+            stopLoss = entry,
+            maxProfitPct = ?
+        WHERE id = ?
+      `).run(maxProfitPct, id);
+    }
+  } else {
+    // WIN_TP2, LOSS_SL, EXPIRED — fully close the signal
+    conn.prepare(`
+      UPDATE signals
+      SET status = ?, closedAt = ?, maxProfitPct = ?
+      WHERE id = ?
+    `).run(status, closedAt, maxProfitPct, id);
+  }
+
   invalidateActiveSignalsCache();
 }
 
@@ -238,23 +260,38 @@ export function getHistoricalStats() {
       COUNT(*) as total,
       SUM(CASE WHEN status IN ('WIN_TP1', 'WIN_TP2') THEN 1 ELSE 0 END) as wins,
       SUM(CASE WHEN status = 'WIN_TP2' THEN 1 ELSE 0 END) as tp2Hits,
-      SUM(CASE WHEN status = 'LOSS_SL' THEN 1 ELSE 0 END) as losses
+      SUM(CASE WHEN status = 'LOSS_SL' THEN 1 ELSE 0 END) as losses,
+      SUM(CASE WHEN tp1Hit = 1 THEN 1 ELSE 0 END) as tp1Touches
     FROM signals
     WHERE status != 'ACTIVE'
   `).get();
 
   if (!row || row.total === 0) {
-    return { totalSignals: 0, winRate: 0, tp2HitRate: 0, stopLosses: 0, accuracy: 0 };
+    return {
+      totalSignals: 0, winRate: 0, tp2HitRate: 0,
+      tp1TouchRate: 0, stopLosses: 0, accuracy: 0, expectancy: 0
+    };
   }
 
   const resolvedTrades = row.wins + row.losses;
+  const tp1Rate = row.tp1Touches / row.total;
+  const tp2Rate = row.tp2Hits / row.total;
+  const slRate = row.losses / row.total;
+
+  // Expectancy in R — how much you make per trade on average
+  // TP1 = 1.25R, TP2 = 2.25R, SL = -1R
+  const expectancy = parseFloat(
+    ((tp1Rate * 1.25) + (tp2Rate * 2.25) - (slRate * 1.0)).toFixed(3)
+  );
 
   return {
     totalSignals: row.total,
     winRate: Math.round((row.wins / row.total) * 100),
-    tp2HitRate: Math.round((row.tp2Hits / row.total) * 100),
+    tp1TouchRate: Math.round(tp1Rate * 100),
+    tp2HitRate: Math.round(tp2Rate * 100),
     stopLosses: row.losses,
-    accuracy: resolvedTrades > 0 ? Math.round((row.wins / resolvedTrades) * 100) : 0
+    accuracy: resolvedTrades > 0 ? Math.round((row.wins / resolvedTrades) * 100) : 0,
+    expectancy
   };
 }
 
