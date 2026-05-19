@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useSignalStore } from '../store/signalStore';
-import { AlertOctagon, Trash2, ShieldAlert, ChevronDown, ChevronUp, RefreshCw, PlusCircle, CheckCircle } from 'lucide-react';
+import { AlertOctagon, Trash2, ShieldAlert, ChevronDown, ChevronUp, RefreshCw, PlusCircle, CheckCircle, Terminal } from 'lucide-react';
 
 export default function ErrorLogsTab() {
-  const { errorLogs, fetchErrorLogs, clearErrorLogs, triggerTestError } = useSignalStore();
+  const { errorLogs, scannerLogs, fetchErrorLogs, clearErrorLogs, triggerTestError } = useSignalStore();
   const [expandedLogId, setExpandedLogId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
@@ -44,11 +44,11 @@ export default function ErrorLogsTab() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-[#1e2d40]">
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2 text-red-500">
-            <AlertOctagon /> System Error Logs
+          <h2 className="text-xl font-bold flex items-center gap-2 text-gray-200">
+            <Terminal className="text-[#00d4aa]" /> Diagnostics & System Logs
           </h2>
           <p className="text-xs text-gray-500 mt-1">
-            Real-time tracking of backend scanner exceptions, API rate limits, and Gemini AI processing errors.
+            Real-time tracking of background scanners, scoring steps, and backend exceptions.
           </p>
         </div>
 
@@ -81,10 +81,49 @@ export default function ErrorLogsTab() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
           >
             <Trash2 size={14} />
-            Clear Logs
+            Clear Errors
           </button>
         </div>
       </div>
+
+      {/* Live Scan Console Terminal */}
+      <div className="mb-8 bg-[#0a0e17] border border-[#1e2d40] rounded-lg p-5">
+        <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#1e2d40]/60">
+          <div className="flex items-center gap-2 text-[#00d4aa]">
+            <Terminal size={18} />
+            <h3 className="text-sm font-bold uppercase tracking-wider">Live Scanner Terminal</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00d4aa] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00d4aa]"></span>
+            </span>
+            <span className="text-[10px] text-gray-500 font-medium">LIVE STREAMING</span>
+          </div>
+        </div>
+        
+        <div 
+          className="bg-black/60 border border-black p-4 rounded-lg font-mono text-xs text-emerald-400/90 leading-relaxed overflow-y-auto max-h-[300px] h-[300px] flex flex-col space-y-1.5 custom-scrollbar leading-5"
+          style={{ textShadow: '0 0 2px rgba(0, 212, 170, 0.2)' }}
+        >
+          {scannerLogs.length === 0 ? (
+            <div className="text-gray-600 italic my-auto text-center">
+              No scans logged yet. Click "Scan" in the header to trigger a manual scan and stream the real-time scoring output here!
+            </div>
+          ) : (
+            scannerLogs.map((line, index) => (
+              <div key={index} className="whitespace-pre-wrap select-text">
+                <span className="text-gray-600 select-none mr-2">&gt;</span>
+                {line}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <h3 className="text-sm font-bold uppercase tracking-wider text-red-500 mb-4 flex items-center gap-2">
+        <AlertOctagon size={16} /> Historical System Errors
+      </h3>
 
       {/* Content */}
       {errorLogs.length === 0 ? (

@@ -1,6 +1,6 @@
 ==================================================
 PROJECT: Signal Scorer Pro
-LAST UPDATED: 2026-05-19 19:35:00 IST
+LAST UPDATED: 2026-05-19 19:40:00 IST
 ==================================================
 
 CURRENT TECH STACK
@@ -236,6 +236,7 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 16. DYNAMIC DASHBOARD PARAMETERS & COOLDOWNS: Integrated dynamic controls in the settings tab for the 30-minute signal cooldown period, and ATR multipliers (Stop Loss, Take Profit 1, Take Profit 2). Programmed automatic seeding on startup, dynamic lookup within the `insertSignals` block, and active parameter override injection in the `SignalScoringEngine` constructor.
 17. COMPREHENSIVE ERROR COVERAGE LOGS: Extended the global `logError()` pipeline directly into the Binance API retry mechanisms and symbol klines fetching catch boundaries. Every transient warning, rate limit warning, or symbol API timeout is now securely cataloged into the SQLite database and instantly populated on the dashboard.
 18. MANUAL SCAN ROUTE CORRECTION: Resolved a critical mismatch where the frontend's manual rescan action was targeting `/api/signals/rescan` (returning a 404), rendering manual dashboard rescans silent. Re-routed to the correct active endpoint `/api/scan` to ensure seamless, real-time manual triggers.
+19. REAL-TIME LIVE SCANNER TERMINAL: Developed an in-memory sliding logs buffer (`scannerLogBuffer`) to record scanner steps and engine metrics. Mounted a dedicated `GET /api/logs/scanner` REST endpoint and configured real-time WebSocket broadcasting over `scan:log`. Designed and integrated a premium green-on-black scrolling terminal console tab on the dashboard, providing full visibility into technical scans.
 ==================================================
 TODO FEATURES
 --------------------------------------------------

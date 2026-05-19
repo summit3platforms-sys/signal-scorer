@@ -15,71 +15,93 @@ const SCAN_LIMIT = 150;
 // Kline batch size — 5 at a time with 200ms delay
 const BATCH_SIZE = 5;
 
+export const scannerLogBuffer = [];
+
+function logScanStep(io, message) {
+  const formatted = `[${new Date().toLocaleTimeString()}] ${message}`;
+  scannerLogBuffer.push(formatted);
+  if (scannerLogBuffer.length > 100) {
+    scannerLogBuffer.shift();
+  }
+  console.log(message);
+  if (io) {
+    io.emit('scan:log', { message: formatted, timestamp: Date.now() });
+  }
+}
+
 export async function runFullScan(io) {
   if (isScanning) {
-    console.log('[Scanner] Scan already in progress, skipping.');
+    logScanStep(io, '[Scanner] Scan already in progress, skipping.');
     return null;
   }
   isScanning = true;
   const t0 = Date.now();
 
   if (io) io.emit('scan:started', { timestamp: t0 });
-  console.log(`[Scanner] Starting scan (top ${SCAN_LIMIT} pairs by volume)...`);
+  logScanStep(io, `[Scanner] Starting scan (top ${SCAN_LIMIT} pairs by volume)...`);
 
   try {
     const dbSettings = getSettings();
     const engine = new SignalScoringEngine({}, dbSettings);
 
-    // Step 1: Get top N symbols by 24h quote volume (single ticker bulk call)
+    // Step 1: Get top N symbols by 24h quote volume
+    logScanStep(io, `[Scanner] Step 1: Fetching top ${SCAN_LIMIT} symbols by volume...`);
     const symbols = await getTopSymbolsByVolume(SCAN_LIMIT);
     const totalPairs = symbols.length;
+    logScanStep(io, `[Scanner] Found ${totalPairs} USDT-margined perpetual pairs.`);
 
     if (io) io.emit('scan:progress', { scanned: 0, total: totalPairs, percent: 0 });
 
-    // Step 2: Fetch 15m candles for all (batched with delays)
+    // Step 2: Fetch 15m candles
+    logScanStep(io, `[Scanner] Step 2: Fetching 15m candles (200 limit, batched)...`);
     const k15m = await getMultipleKlines(symbols, '15m', 200, BATCH_SIZE);
+    logScanStep(io, `[Scanner] Successfully fetched 15m candles for ${k15m.size} pairs.`);
 
     if (io) io.emit('scan:progress', { scanned: totalPairs / 2, total: totalPairs, percent: 50 });
 
-    // Step 3: Fetch 1h candles for all (batched with delays)
+    // Step 3: Fetch 1h candles
+    logScanStep(io, `[Scanner] Step 3: Fetching 1h candles (200 limit, batched)...`);
     const k1h = await getMultipleKlines(symbols, '1h', 200, BATCH_SIZE);
+    logScanStep(io, `[Scanner] Successfully fetched 1h candles for ${k1h.size} pairs.`);
 
-    // Step 3b: Fetch 4h candles for confluence filter (batched, same pattern)
+    // Step 3b: Fetch 4h candles
+    logScanStep(io, `[Scanner] Step 3b: Fetching 4h candles (100 limit, batched)...`);
     const k4h = await getMultipleKlines(symbols, '4h', 100, BATCH_SIZE);
+    logScanStep(io, `[Scanner] Successfully fetched 4h candles for ${k4h.size} pairs.`);
 
     if (io) io.emit('scan:progress', { scanned: totalPairs, total: totalPairs, percent: 100 });
 
     // Step 4: Score all pairs
+    logScanStep(io, `[Scanner] Step 4: Scoring pairs using SignalScoringEngine...`);
     const candleMap = new Map();
     for (const sym of symbols) {
       if (k15m.has(sym) && k1h.has(sym)) {
         candleMap.set(sym, {
           '15m': k15m.get(sym),
           '1h': k1h.get(sym),
-          '4h': k4h.get(sym) || null  // optional — engine handles null gracefully
+          '4h': k4h.get(sym) || null
         });
       }
     }
 
     const rawResults = engine.scoreMultiple(symbols, candleMap);
 
-    // DEBUG — remove after diagnosis
-    console.log(`[Debug] Raw scored results: ${rawResults.length}`);
-    console.log(`[Debug] Null results (filtered by engine): ${symbols.length - rawResults.length}`);
-    console.log(`[Debug] Engine minScore threshold: ${engine.getConfig().thresholds.minScore}`);
+    logScanStep(io, `[Debug] Raw scored results count: ${rawResults.length}`);
+    logScanStep(io, `[Debug] Null results (filtered by ADX trend threshold or missing data): ${symbols.length - rawResults.length}`);
+    logScanStep(io, `[Debug] Current Engine minScore threshold setting: ${engine.getConfig().thresholds.minScore}`);
 
     const actionable = rawResults.filter(s => s && s.score >= engine.getConfig().thresholds.minScore);
 
-    // DEBUG — remove after diagnosis
-    console.log(`[Debug] Actionable after minScore filter: ${actionable.length}`);
+    logScanStep(io, `[Debug] Actionable signals after minScore filter: ${actionable.length}`);
     if (rawResults.length > 0) {
       const sample = rawResults.slice(0, 3).map(s => `${s.symbol} score:${s.score} dir:${s.direction}`);
-      console.log(`[Debug] Sample scores: ${sample.join(' | ')}`);
+      logScanStep(io, `[Debug] Sample scores: ${sample.join(' | ')}`);
     }
 
     actionable.sort((a, b) => b.score - a.score);
 
-    // Step 5: Get tickers for price/volume enrichment (single bulk call — already cached)
+    // Step 5: Get tickers
+    logScanStep(io, `[Scanner] Step 5: Enforcing ticker prices & quote volumes...`);
     const tickers = await getAllTickers();
     for (const sig of actionable) {
       const t = tickers.get(sig.symbol);
@@ -90,21 +112,23 @@ export async function runFullScan(io) {
       }
     }
 
-    // Step 6: Async Gemini validation for high-confidence signals (non-blocking)
+    // Step 6: Gemini Validation
     const highConf = actionable.filter(s => s.score >= engine.getConfig().thresholds.highConfidence);
+    logScanStep(io, `[Scanner] Step 6: Async validation. ${highConf.length} signals meet high confidence threshold (${engine.getConfig().thresholds.highConfidence}).`);
     if (highConf.length > 0) {
-      // Fire and forget — update signals in cache as verdicts come in
       (async () => {
         for (const signal of highConf) {
           try {
+            logScanStep(io, `[Gemini] Validating signal for ${signal.symbol}...`);
             const verdict = await validateSignal(signal);
             signal.geminiVerdict = verdict.verdict ? verdict : null;
-            // Send Telegram alert for alert-worthy signals
+            logScanStep(io, `[Gemini] Result for ${signal.symbol}: ${verdict.verdict}`);
             if (signal.score >= engine.getConfig().thresholds.alertScore) {
+              logScanStep(io, `[Telegram] Dispatching alert message for ${signal.symbol}...`);
               await sendAlert(signal);
             }
           } catch (err) {
-            console.error(`[Gemini] Validation failed for ${signal.symbol}: ${err.message}`);
+            logScanStep(io, `[Gemini] Validation failed for ${signal.symbol}: ${err.message}`);
             logError('Gemini AI', `Validation failed for ${signal.symbol}: ${err.message}`, err.stack);
           }
         }
@@ -120,19 +144,18 @@ export async function runFullScan(io) {
 
     setSignals(actionable, meta);
 
-    // Emit final update to all connected clients
     if (io) {
       const { signals, stats } = getSignals();
       io.emit('signals:update', { signals, scannedAt: meta.scannedAt, totalPairs, stats });
     }
 
     const weight = getCurrentWeight();
-    console.log(`[Scanner] ✅ Done in ${Math.round(scanDurationMs / 1000)}s | ${actionable.length} signals | Weight used: ${weight.used}/2400`);
+    logScanStep(io, `[Scanner] ✅ Done in ${Math.round(scanDurationMs / 1000)}s | ${actionable.length} signals | Weight: ${weight.used}/${weight.limit}`);
 
     return { signals: actionable, ...meta };
 
   } catch (err) {
-    console.error('[Scanner] Scan failed:', err.message);
+    logScanStep(io, `[Scanner] ❌ Scan failed: ${err.message}`);
     logError('Scanner', err.message, err.stack);
     if (io) io.emit('scan:error', { error: err.message });
     throw err;

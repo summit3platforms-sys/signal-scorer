@@ -25,6 +25,7 @@ export const useSignalStore = create((set, get) => ({
   socket: null,
   error: null,
   errorLogs: [],
+  scannerLogs: [],
 
   setFilter: (key, value) => {
     const newFilters = { ...get().filters, [key]: value };
@@ -120,6 +121,18 @@ export const useSignalStore = create((set, get) => ({
     }
   },
 
+  fetchScannerLogs: async () => {
+    try {
+      const res = await fetch('/api/logs/scanner');
+      if (res.ok) {
+        const data = await res.json();
+        set({ scannerLogs: data.logs || [] });
+      }
+    } catch (err) {
+      console.error('[Store] Failed to fetch scanner logs:', err);
+    }
+  },
+
   clearErrorLogs: async () => {
     try {
       const res = await fetch('/api/logs', { method: 'DELETE' });
@@ -151,6 +164,7 @@ export const useSignalStore = create((set, get) => ({
           filteredSignals: [],
           tradeHistory: [],
           errorLogs: [],
+          scannerLogs: [],
           stats: { totalSignals: 0, winRate: 0, tp2HitRate: 0, stopLosses: 0, accuracy: 0 }
         });
         return true;
@@ -181,6 +195,8 @@ export const useSignalStore = create((set, get) => ({
       get().fetchSettings();
       // Fetch system error logs initially
       get().fetchErrorLogs();
+      // Fetch scanner logs initially
+      get().fetchScannerLogs();
     });
 
     socket.on('disconnect', () => {
@@ -217,6 +233,13 @@ export const useSignalStore = create((set, get) => ({
       set(state => ({
         scanStatus: { ...state.scanStatus, isScanning: true, scanned, totalPairs: total }
       }));
+    });
+
+    socket.on('scan:log', ({ message }) => {
+      set(state => {
+        const nextLogs = [...state.scannerLogs, message];
+        return { scannerLogs: nextLogs.slice(-100) };
+      });
     });
 
     socket.on('price:update', (priceMap) => {

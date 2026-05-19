@@ -1,7 +1,13 @@
 import express from 'express';
 import { getErrorLogs, clearErrorLogs, logError } from '../services/database.js';
+import { scannerLogBuffer } from '../cronJobs.js';
 
 const router = express.Router();
+
+// GET /api/logs/scanner - Fetch current background scanner steps
+router.get('/scanner', (req, res) => {
+  res.json({ logs: scannerLogBuffer });
+});
 
 // GET /api/logs - Fetch all system errors
 router.get('/', (req, res) => {
