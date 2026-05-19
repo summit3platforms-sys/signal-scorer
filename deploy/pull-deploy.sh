@@ -36,7 +36,7 @@ echo "      ✅ Frontend built"
 # 4. Restart PM2
 echo ""
 echo "[4/4] Restarting application..."
-pm2 restart signal-scorer || pm2 start ecosystem.config.cjs
+pm2 restart signal-scorer || pm2 start ecosystem.config.js --env production
 pm2 save
 echo "      ✅ Application restarted"
 

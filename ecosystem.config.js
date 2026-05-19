@@ -9,7 +9,7 @@ module.exports = {
       // Environment
       env_production: {
         NODE_ENV: 'production',
-        PORT: 8080
+        PORT: 9000
       },
 
       // Memory & restart policy
