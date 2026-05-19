@@ -268,7 +268,6 @@ export function getHistoricalStats() {
   const row = conn.prepare(`
     SELECT
       COUNT(*) as total,
-      SUM(CASE WHEN status IN ('WIN_TP1', 'WIN_TP2') THEN 1 ELSE 0 END) as wins,
       SUM(CASE WHEN status = 'WIN_TP2' THEN 1 ELSE 0 END) as tp2Hits,
       SUM(CASE WHEN status = 'LOSS_SL' THEN 1 ELSE 0 END) as losses,
       SUM(CASE WHEN tp1Hit = 1 THEN 1 ELSE 0 END) as tp1Touches
@@ -278,29 +277,58 @@ export function getHistoricalStats() {
 
   if (!row || row.total === 0) {
     return {
-      totalSignals: 0, winRate: 0, tp2HitRate: 0,
-      tp1TouchRate: 0, stopLosses: 0, accuracy: 0, expectancy: 0
+      totalSignals: 0,
+      accuracy: 0,
+      tp1TouchRate: 0,
+      tp2HitRate: 0,
+      stopLosses: 0,
+      expectancy: 0
     };
   }
 
-  const resolvedTrades = row.wins + row.losses;
-  const tp1Rate = row.tp1Touches / row.total;
-  const tp2Rate = row.tp2Hits / row.total;
-  const slRate = row.losses / row.total;
+  // Weighted Accuracy: TP2 = 1.0, TP1-only = 0.5, SL = 0.0
+  const score = (row.tp2Hits * 1.0) + ((row.tp1Touches - row.tp2Hits) * 0.5);
+  const accuracy = Math.round((score / row.total) * 100);
 
-  // Expectancy in R — how much you make per trade on average
-  // TP1 = 1.25R, TP2 = 2.25R, SL = -1R
-  const expectancy = parseFloat(
-    ((tp1Rate * 1.25) + (tp2Rate * 2.25) - (slRate * 1.0)).toFixed(3)
-  );
+  const tp1TouchRate = Math.round((row.tp1Touches / row.total) * 100);
+  const tp2HitRate = Math.round((row.tp2Hits / row.total) * 100);
+
+  // Calculate empirical mathematical expectancy based on closed signal profit percentages
+  const resolved = conn.prepare(`
+    SELECT maxProfitPct 
+    FROM signals 
+    WHERE status != 'ACTIVE'
+  `).all();
+
+  let winCount = 0;
+  let lossCount = 0;
+  let totalWinPct = 0;
+  let totalLossPct = 0;
+
+  for (const t of resolved) {
+    const pct = t.maxProfitPct || 0;
+    if (pct > 0) {
+      winCount++;
+      totalWinPct += pct;
+    } else if (pct < 0) {
+      lossCount++;
+      totalLossPct += pct;
+    }
+  }
+
+  const wRate = winCount / row.total;
+  const lRate = lossCount / row.total;
+  const avgWin = winCount > 0 ? (totalWinPct / winCount) : 0;
+  const avgLoss = lossCount > 0 ? Math.abs(totalLossPct / lossCount) : 0;
+
+  const expectancy = parseFloat(((wRate * avgWin) - (lRate * avgLoss)).toFixed(2));
 
   return {
     totalSignals: row.total,
-    winRate: Math.round((row.wins / row.total) * 100),
-    tp1TouchRate: Math.round(tp1Rate * 100),
-    tp2HitRate: Math.round(tp2Rate * 100),
+    accuracy,
+    tp1TouchRate,
+    tp2HitRate,
     stopLosses: row.losses,
-    accuracy: resolvedTrades > 0 ? Math.round((row.wins / resolvedTrades) * 100) : 0,
     expectancy
   };
 }

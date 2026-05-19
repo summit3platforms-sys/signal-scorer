@@ -17,7 +17,7 @@ export const useSignalStore = create((set, get) => ({
   filteredSignals: [],
   tradeHistory: [],
   systemNotes: '',
-  stats: { totalSignals: 0, winRate: 0, tp2HitRate: 0, stopLosses: 0 },
+  stats: { totalSignals: 0, accuracy: 0, tp1TouchRate: 0, tp2HitRate: 0, stopLosses: 0, expectancy: 0 },
   filters: { direction: 'ALL', minScore: 60, timeframe: '15m' },
   prices: {},
   scanStatus: { isScanning: false, lastScanAt: null, totalPairs: 0, countdown: 300 },
@@ -165,7 +165,7 @@ export const useSignalStore = create((set, get) => ({
           tradeHistory: [],
           errorLogs: [],
           scannerLogs: [],
-          stats: { totalSignals: 0, winRate: 0, tp2HitRate: 0, stopLosses: 0, accuracy: 0 }
+          stats: { totalSignals: 0, accuracy: 0, tp1TouchRate: 0, tp2HitRate: 0, stopLosses: 0, expectancy: 0 }
         });
         return true;
       } else {
