@@ -34,10 +34,23 @@ export default function SignalDetail({ signal, onClose }) {
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
-  const { symbol, score, direction, confidence, entry, stopLoss, takeProfit,
+  const { symbol, score, direction, confidence, entry, stopLoss, takeProfit, tp1, tp2, tp1Hit,
           price, priceChange, indicators, breakdown, interval, timestamp } = signal
 
   const changePos = priceChange >= 0
+
+  const isLong = direction === 'LONG';
+  const valTP1 = tp1 ?? takeProfit?.[0] ?? 0;
+  const valTP2 = tp2 ?? takeProfit?.[1] ?? 0;
+  const tp1Dist = isLong 
+    ? ((valTP1 - entry) / entry) * 100 
+    : ((entry - valTP1) / entry) * 100;
+  const tp2Dist = isLong 
+    ? ((valTP2 - entry) / entry) * 100 
+    : ((entry - valTP2) / entry) * 100;
+  const slDist = isLong 
+    ? ((entry - stopLoss) / entry) * 100 
+    : ((stopLoss - entry) / entry) * 100;
 
   const indItems = [
     { name: 'RSI (14)',     value: fmt(indicators?.rsi, 2),       color: indicators?.rsi < 30 ? 'var(--accent-long)' : indicators?.rsi > 70 ? 'var(--accent-short)' : 'var(--text-primary)' },
@@ -89,11 +102,17 @@ export default function SignalDetail({ signal, onClose }) {
               </div>
               <div className="level-item" style={{ marginBottom: 6 }}>
                 <div className="level-label">Stop Loss</div>
-                <div className="level-value sl">${fmt(stopLoss)}</div>
+                <div className="level-value sl">
+                  ${fmt(stopLoss)}
+                  <span style={{ fontSize: 10, color: 'var(--accent-short)', marginLeft: 6 }}>-{slDist.toFixed(2)}%</span>
+                </div>
               </div>
               <div className="level-item" style={{ marginBottom: 6 }}>
                 <div className="level-label">TP 1 / TP 2</div>
-                <div className="level-value tp">${fmt(takeProfit?.[0])} / ${fmt(takeProfit?.[1])}</div>
+                <div className="level-value tp">
+                  ${fmt(valTP1)} <span style={{ fontSize: 10, color: 'var(--accent-long)' }}>+{tp1Dist.toFixed(2)}%</span> / 
+                  ${fmt(valTP2)} <span style={{ fontSize: 10, color: 'var(--accent-long)' }}>+{tp2Dist.toFixed(2)}%</span>
+                </div>
               </div>
             </div>
           </div>

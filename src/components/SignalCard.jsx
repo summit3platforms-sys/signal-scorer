@@ -43,6 +43,17 @@ export default function SignalCard({ signal, livePrice }) {
   const change = signal.priceChange ?? 0;
   const borderClass = REGIME_BORDER[signal.regime] ?? 'border-l-4 border-l-gray-700';
 
+  const isLong = signal.direction === 'LONG';
+  const tp1Dist = isLong 
+    ? ((signal.tp1 - signal.entry) / signal.entry) * 100 
+    : ((signal.entry - signal.tp1) / signal.entry) * 100;
+  const tp2Dist = isLong 
+    ? ((signal.tp2 - signal.entry) / signal.entry) * 100 
+    : ((signal.entry - signal.tp2) / signal.entry) * 100;
+  const slDist = isLong 
+    ? ((signal.entry - signal.stopLoss) / signal.entry) * 100 
+    : ((signal.stopLoss - signal.entry) / signal.entry) * 100;
+
   const confidenceColors = {
     VERY_HIGH: 'bg-emerald-900 text-emerald-300',
     HIGH: 'bg-blue-900 text-blue-300',
@@ -110,10 +121,32 @@ export default function SignalCard({ signal, livePrice }) {
       </div>
 
       {/* Confidence & Action */}
-      <div className="flex items-center justify-between mb-3">
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${confidenceColors[signal.confidence] || 'bg-gray-800 text-gray-400'}`}>
-          {signal.confidence?.replace('_', ' ')}
-        </span>
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${confidenceColors[signal.confidence] || 'bg-gray-800 text-gray-400'}`}>
+            {signal.confidence?.replace('_', ' ')}
+          </span>
+          {/* HTF Bias badge */}
+          {signal.htfBias && signal.htfBias !== 'NEUTRAL' && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${signal.htfBias === 'LONG' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/45' : 'bg-red-950 text-red-400 border border-red-800/45'}`}>
+              4H {signal.htfBias}
+            </span>
+          )}
+
+          {/* Historical win rate badge */}
+          {signal.historicalWinRate != null && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950 text-blue-400 border border-blue-800/45">
+              {signal.historicalWinRate}% hist ({signal.historicalSampleSize} trades)
+            </span>
+          )}
+
+          {/* TP1 already hit badge */}
+          {signal.tp1Hit === 1 && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-950 text-yellow-400 border border-yellow-800/45 animate-pulse">
+              TP1 hit — breakeven SL
+            </span>
+          )}
+        </div>
         <button
           onClick={handleTelegramSend}
           disabled={isSending || sendSuccess}
@@ -129,11 +162,20 @@ export default function SignalCard({ signal, livePrice }) {
         <div className="text-gray-400">Entry</div>
         <div className="text-white">${fmtPrice(signal.entry)}</div>
         <div className="text-red-400">Stop Loss</div>
-        <div className="text-red-300">${fmtPrice(signal.stopLoss)}</div>
+        <div className="text-red-300">
+          ${fmtPrice(signal.stopLoss)}
+          <span className="text-[10px] text-red-500/80 ml-1">-{slDist.toFixed(2)}%</span>
+        </div>
         <div className="text-emerald-400">TP1</div>
-        <div className="text-emerald-300">${fmtPrice(signal.tp1)}</div>
+        <div className="text-emerald-300">
+          ${fmtPrice(signal.tp1)}
+          <span className="text-[10px] text-emerald-500/80 ml-1">+{tp1Dist.toFixed(2)}%</span>
+        </div>
         <div className="text-emerald-400">TP2</div>
-        <div className="text-emerald-300">${fmtPrice(signal.tp2)}</div>
+        <div className="text-emerald-300">
+          ${fmtPrice(signal.tp2)}
+          <span className="text-[10px] text-emerald-500/80 ml-1">+{tp2Dist.toFixed(2)}%</span>
+        </div>
         <div className="text-gray-400">R:R</div>
         <div className="text-white">{signal.riskReward}x</div>
       </div>

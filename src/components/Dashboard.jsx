@@ -37,25 +37,45 @@ export default function Dashboard() {
       <div className="app-wrapper">
         {/* Stats row */}
         <div className="stats-row">
+          {/* Row 1 — signal counts */}
           <div className="stat-card">
             <div className="stat-label">Total Signals</div>
             <div className="stat-value blue">{stats.total}</div>
             <div className="stat-sub">of {meta?.totalPairs ?? '—'} pairs scanned</div>
           </div>
+
           <div className="stat-card">
-            <div className="stat-label">Overall Win Rate (TP1)</div>
-            <div className="stat-value green">{meta?.trackerStats?.overallWinRate ?? 0}%</div>
-            <div className="stat-sub">based on {meta?.trackerStats?.totalTracked ?? 0} tracked</div>
+            <div className="stat-label">Long / Short</div>
+            <div className="stat-value blue">{stats.longs}
+              <span style={{ color: 'var(--color-red)', marginLeft: 6 }}>/ {stats.shorts}</span>
+            </div>
+            <div className="stat-sub">direction split</div>
           </div>
+
+          <div className="stat-card">
+            <div className="stat-label">TP1 Touch Rate</div>
+            <div className="stat-value green">{meta?.trackerStats?.tp1TouchRate ?? 0}%</div>
+            <div className="stat-sub">signals that reached TP1</div>
+          </div>
+
           <div className="stat-card">
             <div className="stat-label">TP2 Hit Rate</div>
-            <div className="stat-value gold">{meta?.trackerStats?.tp2WinRate ?? 0}%</div>
+            <div className="stat-value gold">{meta?.trackerStats?.tp2HitRate ?? 0}%</div>
             <div className="stat-sub">full target reached</div>
           </div>
+
           <div className="stat-card">
             <div className="stat-label">Stop Losses</div>
-            <div className="stat-value red">{meta?.trackerStats?.slHits ?? 0}</div>
+            <div className="stat-value red">{meta?.trackerStats?.stopLosses ?? 0}</div>
             <div className="stat-sub">signals stopped out</div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-label">Expectancy</div>
+            <div className={`stat-value ${(meta?.trackerStats?.expectancy ?? 0) >= 0 ? 'green' : 'red'}`}>
+              {meta?.trackerStats?.expectancy ?? '—'}R
+            </div>
+            <div className="stat-sub">avg return per trade</div>
           </div>
         </div>
 
