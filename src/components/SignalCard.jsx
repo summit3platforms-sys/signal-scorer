@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Send, CheckCircle } from 'lucide-react';
 import ScoreRing from './ScoreRing.jsx';
 
 const REGIME_BORDER = {
@@ -35,7 +36,9 @@ function Sparkline({ closes = [] }) {
 }
 
 export default function SignalCard({ signal, livePrice }) {
-  const [hovered, setHovered] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
+
   const price = livePrice ?? signal.entry;
   const change = signal.priceChange ?? 0;
   const borderClass = REGIME_BORDER[signal.regime] ?? 'border-l-4 border-l-gray-700';
@@ -50,12 +53,33 @@ export default function SignalCard({ signal, livePrice }) {
   const last20Closes = signal.sparkline || [];
   const gemini = signal.geminiVerdict;
 
+  const handleTelegramSend = async (e) => {
+    e.stopPropagation();
+    if (isSending || sendSuccess) return;
+    
+    setIsSending(true);
+    try {
+      const res = await fetch('/api/telegram/send-signal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signal })
+      });
+      if (res.ok) {
+        setSendSuccess(true);
+        setTimeout(() => setSendSuccess(false), 3000);
+      } else {
+        const err = await res.json();
+        console.error('Failed to send:', err.error);
+      }
+    } catch (err) {
+      console.error('Error sending to Telegram:', err);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
-    <div
-      className={`relative rounded-xl bg-[#0f1923] border border-[#1e2d40] ${borderClass} p-4 cursor-pointer transition-all duration-200 hover:border-[#2e4a6a] hover:shadow-lg hover:shadow-black/40 animate-fadeSlide`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <div className={`relative rounded-xl bg-[#0f1923] border border-[#1e2d40] ${borderClass} p-4 transition-all duration-200 hover:border-[#2e4a6a] hover:shadow-lg hover:shadow-black/40 animate-fadeSlide`}>
       {/* Top Row */}
       <div className="flex items-start justify-between mb-3">
         <div>
@@ -83,11 +107,19 @@ export default function SignalCard({ signal, livePrice }) {
         <Sparkline closes={last20Closes} />
       </div>
 
-      {/* Confidence */}
-      <div className="mb-3">
+      {/* Confidence & Action */}
+      <div className="flex items-center justify-between mb-3">
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${confidenceColors[signal.confidence] || 'bg-gray-800 text-gray-400'}`}>
           {signal.confidence?.replace('_', ' ')}
         </span>
+        <button
+          onClick={handleTelegramSend}
+          disabled={isSending || sendSuccess}
+          title="Send to Telegram"
+          className="text-gray-400 hover:text-[#0088cc] transition-colors disabled:opacity-50"
+        >
+          {sendSuccess ? <CheckCircle size={18} className="text-emerald-500" /> : <Send size={18} />}
+        </button>
       </div>
 
       {/* Trade Levels */}
@@ -104,25 +136,11 @@ export default function SignalCard({ signal, livePrice }) {
         <div className="text-white">{signal.riskReward}x</div>
       </div>
 
-      {/* Hover overlay with Gemini + reasons */}
-      {hovered && (
-        <div className="absolute inset-0 rounded-xl bg-[#0a0e17]/95 border border-[#2e4a6a] p-4 flex flex-col justify-center gap-2 z-10">
-          {gemini && (
-            <div className={`text-xs font-bold px-2 py-1 rounded ${gemini.verdict === 'CONFIRM' ? 'bg-emerald-900 text-emerald-300' : gemini.verdict === 'REJECT' ? 'bg-red-900 text-red-300' : 'bg-yellow-900 text-yellow-300'}`}>
-              AI: {gemini.verdict} — {gemini.reason}
-            </div>
-          )}
-          <div className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Top Reasons</div>
-          <ul className="space-y-1">
-            {(signal.reasons || []).slice(0, 3).map((r, i) => (
-              <li key={i} className="text-xs text-gray-300 flex gap-1"><span className="text-emerald-400">•</span>{r}</li>
-            ))}
-          </ul>
-          <div className="grid grid-cols-2 gap-1 mt-1 text-xs font-mono text-gray-400">
-            <span>Trend: <b className="text-white">{signal.subScores?.trend?.score}</b></span>
-            <span>Mom: <b className="text-white">{signal.subScores?.momentum?.score}</b></span>
-            <span>Vol: <b className="text-white">{signal.subScores?.volume?.score}</b></span>
-            <span>Str: <b className="text-white">{signal.subScores?.structure?.score}</b></span>
+      {/* Gemini verdict if available */}
+      {gemini && (
+        <div className="mt-3">
+          <div className={`text-[10px] font-bold px-2 py-1 rounded border ${gemini.verdict === 'CONFIRM' ? 'bg-emerald-900/20 text-emerald-400 border-emerald-900/50' : gemini.verdict === 'REJECT' ? 'bg-red-900/20 text-red-400 border-red-900/50' : 'bg-yellow-900/20 text-yellow-400 border-yellow-900/50'}`}>
+            AI: {gemini.verdict} — {gemini.reason}
           </div>
         </div>
       )}
