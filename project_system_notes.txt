@@ -1,6 +1,6 @@
 ==================================================
 PROJECT: Signal Scorer Pro
-LAST UPDATED: 2026-05-18 22:18:00 IST
+LAST UPDATED: 2026-05-19 16:32:00 IST
 ==================================================
 
 CURRENT TECH STACK
@@ -13,7 +13,7 @@ Frontend:
 - Lucide React (Icons)
 
 Backend:
-- Node.js 20 (Runtime)
+- Node.js 22 (Production host node runtime)
 - Express 4 (REST API Server)
 - Socket.io 4 (Real-time WebSocket communication)
 - Node-Cron (Background scheduling)
@@ -37,19 +37,19 @@ Fault Tolerance:
 SYSTEM ARCHITECTURE
 --------------------------------------------------
 
-[ Binance WS ] =====(wss://fstream.binance.com)=====> [ priceStream.js ] (0 cost, 1s tick)
-                                                              |
-                                                              v
+[ Binance WS ] ===(wss://fstream.binance.com/market/ws)===> [ priceStream.js ] (0 cost, 1s tick)
+                                                               |
+                                                               v
 [ Binance REST ] <---(HTTP GET / pLimit)--- [ Node/Express cronJobs.js ] <---(Socket.io)---> [ React Frontend ]
-                                                              |
-                                                              v
-                                                     [ SQLite (WAL Mode) ]
-                                                              |
-                                                              v
-                                                   [ Telegram & Gemini AI ]
+                                                               |
+                                                               v
+                                                      [ SQLite (WAL Mode) ]
+                                                               |
+                                                               v
+                                                    [ Telegram & Gemini AI ]
 
 Architecture Flow:
-1. priceStream.js maintains a single persistent WebSocket to Binance Futures miniTicker stream, maintaining a sub-second in-memory live price cache of all USDT perpetuals for zero API weight cost.
+1. priceStream.js maintains a single persistent WebSocket to Binance Futures market stream, maintaining a sub-second in-memory live price cache of all USDT perpetuals for zero API weight cost.
 2. cronJobs.js wakes up every 5 minutes and calls Binance REST via binanceBreaker (Circuit Breaker) for the Top 150 pairs.
 3. It fetches 15m and 1h candlestick data in batches using a concurrency limiter (pLimit) to prevent rate limit limits.
 4. The data is fed into SignalScoringEngine.js.
@@ -88,19 +88,17 @@ API ENDPOINTS
 
 ==================================================
 FEATURE: System Error Logs
-
+--------------------------------------------------
 Backend:
-
-SQLite table 'error_logs' tracking exceptions.
-Custom 'logError' helper integrated across Binance, Gemini AI, Scanner, and PriceTracker.
-Exposes rich API endpoints for frontend log retrieval.
+- SQLite table 'error_logs' tracking exceptions.
+- Custom 'logError' helper integrated across Binance, Gemini AI, Scanner, and PriceTracker.
+- Exposes rich API endpoints for frontend log retrieval.
 
 Frontend:
-
-Dedicated 'Error Logs' Tab on Dashboard.
-Displays errors with contextual tags, timestamps, and expandable stack traces.
-Features 'Simulate Error' to trigger instant diagnostic logging and verification.
-Features 'Clear Logs' for single-click maintenance.
+- Dedicated 'Error Logs' Tab on Dashboard.
+- Displays errors with contextual tags, timestamps, and expandable stack traces.
+- Features 'Simulate Error' to trigger instant diagnostic logging and verification.
+- Features 'Clear Logs' for single-click maintenance.
 
 ==================================================
 DATABASE TABLES (SQLite)
@@ -155,10 +153,11 @@ Environment Variables (.env):
 - VITE_SOCKET_URL (http://localhost:8080 in dev, empty in prod)
 
 ==================================================
-KNOWN ISSUES
+KNOWN ISSUES & PRODUCTION WORKAROUNDS
 --------------------------------------------------
 - Binance IP Rate Limits: If the scan frequency is too high or the batch size too large, Binance returns HTTP 418 (IP Banned). Mitigated by 5-min intervals and 150-pair limits.
-- MacOS Port Binding (EPERM): Sandbox constraints on macOS sometimes prevent automated tools from binding to ports. Users must run `npm run dev` locally.
+- Hostinger Node Version ABI Mismatch: Node major version updates can mismatch better-sqlite3's C++ bindings (e.g., compiled on NODE_MODULE_VERSION 115 but run on 137). Resolved by performing a complete Node rebuild/reinstall (`rm -rf node_modules package-lock.json && npm install`) on the production VPS.
+- Binance Legacy WS Stream Drop: Connecting directly to legacy stream paths (e.g. `fstream.binance.com/ws`) accepts connection handshakes but silently drops all message events. Bypassed by updating to the newly required routed market path: `wss://fstream.binance.com/market/ws/!miniTicker@arr`.
 
 ==================================================
 COMPLETED FEATURES
@@ -212,8 +211,24 @@ Frontend:
 - System Health Tab visually displays ping/status for Binance, SQLite, Telegram.
 - Settings Tab provides sliders to hot-swap engine calculation weights.
 
+FEATURE: Automated Expired Signals Cleanup
+Backend:
+- `deleteExpiredSignals` automatically purges database EXPIRED signals older than 7 days on startup to maintain peak performance and save disk space.
+
+==================================================
+SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
+--------------------------------------------------
+1. PRODUCTION WS FIX: Legacy WebSocket connection string `wss://fstream.binance.com/ws/!miniTicker@arr` successfully connected but returned zero data due to Binance stream deprecation. Upgraded connection endpoint to the modern routed URL: `wss://fstream.binance.com/market/ws/!miniTicker@arr`.
+2. DYNAMIC 24H CHANGE CALCULATION: Since the `!miniTicker@arr` stream does not natively expose a pre-calculated `change24h` / `P` property (leading to stuck `+0.00%` on frontend cards), implemented a dynamic, real-time formula mapping in `priceStream.js` using open price (`t.o`) and close price (`t.c`) relative percent difference: `((close - open) / open) * 100`.
+3. PRISTINE PURGE ALL DATA: Wipes database signals, errors, and resets 12-hour scanner deduplication cache. Enhanced the Zustand frontend client socket handler with nullish coalescing to prevent fallback errors when `totalPairs` is `0`, and set `scannedAt: null` on purge so that the dashboard pristine state reads `Last scan: Never` and `0 pairs` beautifully.
+4. HOSTINGER SQLITE DRIVER REBUILD: Cleansed Node package dependencies on Hostinger VPS and rebuilt standard native compiler paths to eliminate native Better-SQLite3 compilation mismatches.
+5. AUTO-CLEANUP ON STARTUP: Integrated startup SQLite cleanup targeting EXPIRED signals older than 7 days, preventing database bloat and keeping indexes hot.
+6. DAILY CLEANUP CRON SCHEDULE: Added a daily cron job scheduled at 03:00 AM in `cronJobs.js` to execute `deleteExpiredSignals(7)` continuously.
+7. DUPLICATE ACTIVE SIGNAL GUARD: Modified `insertSignals` in `database.js` to dynamically reject insertions for symbols that already have an active trade open, preventing whipsaw and spam alerts during high volatility.
+8. EMPIRICAL WIN-RATE LOOKUP: Integrated real-time 30-day historical win-rate calculation inside `insertSignals` (`getSymbolWinRate`). Automatically scans preceding resolved trade statistics for a specific symbol & direction to attach empirical win rates and sample sizes to incoming active signals for high-confidence trading.
+9. 4H MULTI-TIMEFRAME TREND CONFLUENCE: Integrated a high-order 4h trend filter in `SignalScoringEngine.js` using EMA(9)/EMA(21) alignments and EMA(200) prices. Dynamically filters out short-term counter-trend signals to eliminate whipsaws and elevate edge.
+
 ==================================================
 TODO FEATURES
 --------------------------------------------------
-- Database: Implement a cleanup job to delete EXPIRED signals older than 7 days to save space.
 - Binance: Add automated trade execution (via authenticated API keys) based on the generated signals.

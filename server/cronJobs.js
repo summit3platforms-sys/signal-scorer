@@ -5,7 +5,7 @@ import { SignalScoringEngine } from '../signal-engine/SignalScoringEngine.js';
 import { validateSignal } from '../lib/gemini.js';
 import { sendAlert } from '../lib/telegram.js';
 import { setSignals, getSignals } from './cache.js';
-import { getSettings, getActiveSignals, updateSignalStatus, logError, getRecentSignalKeys } from './services/database.js';
+import { getSettings, getActiveSignals, updateSignalStatus, logError, getRecentSignalKeys, deleteExpiredSignals } from './services/database.js';
 
 let isScanning = false;
 
@@ -44,13 +44,20 @@ export async function runFullScan(io) {
     // Step 3: Fetch 1h candles for all (batched with delays)
     const k1h = await getMultipleKlines(symbols, '1h', 200, BATCH_SIZE);
 
+    // Step 3b: Fetch 4h candles for confluence filter (batched, same pattern)
+    const k4h = await getMultipleKlines(symbols, '4h', 100, BATCH_SIZE);
+
     if (io) io.emit('scan:progress', { scanned: totalPairs, total: totalPairs, percent: 100 });
 
     // Step 4: Score all pairs
     const candleMap = new Map();
     for (const sym of symbols) {
       if (k15m.has(sym) && k1h.has(sym)) {
-        candleMap.set(sym, { '15m': k15m.get(sym), '1h': k1h.get(sym) });
+        candleMap.set(sym, {
+          '15m': k15m.get(sym),
+          '1h': k1h.get(sym),
+          '4h': k4h.get(sym) || null  // optional — engine handles null gracefully
+        });
       }
     }
 
@@ -219,6 +226,12 @@ export function initCronJobs(io) {
   });
 
   console.log('[Cron] Scheduled: 5-min full scan.');
+
+  // Run cleanup once per day at 03:00 AM
+  cron.schedule('0 3 * * *', () => {
+    deleteExpiredSignals(7);
+  });
+  console.log('[Cron] Scheduled: daily expired signal cleanup at 03:00.');
 
   // Initialize zero-cost WebSocket pricing via the centralized module
   console.log('[Stream] Starting WebSocket live price stream...');

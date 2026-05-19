@@ -202,7 +202,7 @@ export const useSignalStore = create((set, get) => ({
         scanStatus: {
           ...state.scanStatus,
           lastScanAt: scannedAt,
-          totalPairs: totalPairs || state.scanStatus.totalPairs,
+          totalPairs: totalPairs !== undefined && totalPairs !== null ? totalPairs : state.scanStatus.totalPairs,
           isScanning: false,
           countdown: 300
         }

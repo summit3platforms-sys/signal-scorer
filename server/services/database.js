@@ -44,7 +44,9 @@ export function initDB() {
       closedAt INTEGER,
       maxProfitPct REAL DEFAULT 0,
       reasons TEXT,
-      subScores TEXT
+      subScores TEXT,
+      historicalWinRate REAL,
+      historicalSampleSize INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -65,6 +67,14 @@ export function initDB() {
     CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON error_logs(timestamp);
   `);
 
+  // Gracefully migrate existing schemas if they don't have these columns
+  try {
+    db.exec(`ALTER TABLE signals ADD COLUMN historicalWinRate REAL`);
+  } catch (err) {}
+  try {
+    db.exec(`ALTER TABLE signals ADD COLUMN historicalSampleSize INTEGER`);
+  } catch (err) {}
+
   const hasSettings = db.prepare(`SELECT COUNT(*) as c FROM settings`).get().c;
   if (hasSettings === 0) {
     const defaults = {
@@ -84,6 +94,14 @@ export function initDB() {
   }
 
   console.log('[Database] SQLite initialized at:', dbPath);
+  
+  // Run automatic startup cleanup of expired signals (older than 7 days)
+  try {
+    deleteExpiredSignals(7);
+  } catch (err) {
+    console.error('[Database] Startup cleanup failed:', err.message);
+  }
+
   return db;
 }
 
@@ -115,19 +133,30 @@ export function updateSettings(newSettings) {
 
 export function insertSignals(signalsArray) {
   const conn = getDB();
-  const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
+  // Fetch all symbols that currently have an ACTIVE signal
+  const activeSymbols = new Set(
+    conn.prepare(`SELECT symbol FROM signals WHERE status = 'ACTIVE'`).all().map(r => r.symbol)
+  );
+
+  // Filter out any signal whose symbol is already active
+  const deduplicated = signalsArray.filter(sig => !activeSymbols.has(sig.symbol));
+
+  if (deduplicated.length === 0) {
+    console.log('[Database] insertSignals: all signals deduplicated, nothing to insert.');
+    return 0;
+  }
+
   const insert = conn.prepare(`
     INSERT OR REPLACE INTO signals 
-    (id, symbol, direction, score, confidence, entry, tp1, tp2, stopLoss, status, createdAt, reasons, subScores)
-    VALUES (@id, @symbol, @direction, @score, @confidence, @entry, @tp1, @tp2, @stopLoss, @status, @createdAt, @reasons, @subScores)
+    (id, symbol, direction, score, confidence, entry, tp1, tp2, stopLoss, status, createdAt, reasons, subScores, historicalWinRate, historicalSampleSize)
+    VALUES (@id, @symbol, @direction, @score, @confidence, @entry, @tp1, @tp2, @stopLoss, @status, @createdAt, @reasons, @subScores, @historicalWinRate, @historicalSampleSize)
   `);
 
   const insertMany = conn.transaction((signals) => {
     for (const sig of signals) {
-      // Stable ID: same symbol+direction within a 12-hour window → same row (prevents duplicates)
-      const epochBucket = Math.floor(sig.timestamp / TWELVE_HOURS_MS);
       insert.run({
-        id: `${sig.symbol}_${sig.direction}_${epochBucket}`,
+        id: `${sig.symbol}_${sig.timestamp}`,
         symbol: sig.symbol,
         direction: sig.direction,
         score: sig.score,
@@ -139,13 +168,25 @@ export function insertSignals(signalsArray) {
         status: 'ACTIVE',
         createdAt: sig.timestamp,
         reasons: JSON.stringify(sig.reasons),
-        subScores: JSON.stringify(sig.subScores)
+        subScores: JSON.stringify(sig.subScores),
+        historicalWinRate: sig.historicalWinRate ?? null,
+        historicalSampleSize: sig.historicalSampleSize ?? null
       });
     }
   });
 
-  insertMany(signalsArray);
+  // Attach empirical win-rate from last 30 days to each signal
+  for (const sig of deduplicated) {
+    const hist = getSymbolWinRate(sig.symbol, sig.direction);
+    sig.historicalWinRate = hist ? hist.winRate : null;
+    sig.historicalSampleSize = hist ? hist.sampleSize : null;
+  }
+
+  insertMany(deduplicated);
   invalidateActiveSignalsCache();
+
+  console.log(`[Database] Inserted ${deduplicated.length} new signals (${signalsArray.length - deduplicated.length} duplicates skipped).`);
+  return deduplicated.length;
 }
 
 /**
@@ -279,4 +320,42 @@ export function purgeAllData() {
   });
   tx();
   invalidateActiveSignalsCache();
+}
+
+export function deleteExpiredSignals(olderThanDays = 7) {
+  const conn = getDB();
+  const cutoff = Date.now() - (olderThanDays * 24 * 60 * 60 * 1000);
+  const result = conn.prepare(`
+    DELETE FROM signals 
+    WHERE status = 'EXPIRED' 
+    AND createdAt < ?
+  `).run(cutoff);
+  if (result.changes > 0) {
+    console.log(`[Database] Cleaned up ${result.changes} expired signals older than ${olderThanDays} days.`);
+    invalidateActiveSignalsCache();
+  }
+  return result.changes;
+}
+
+export function getSymbolWinRate(symbol, direction) {
+  const conn = getDB();
+  const cutoff = Date.now() - (30 * 24 * 60 * 60 * 1000); // last 30 days
+
+  const row = conn.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status IN ('WIN_TP1', 'WIN_TP2') THEN 1 ELSE 0 END) as wins
+    FROM signals
+    WHERE symbol = ?
+      AND direction = ?
+      AND status NOT IN ('ACTIVE', 'EXPIRED')
+      AND createdAt > ?
+  `).get(symbol, direction, cutoff);
+
+  if (!row || row.total < 5) return null; // not enough history to be meaningful
+
+  return {
+    winRate: Math.round((row.wins / row.total) * 100),
+    sampleSize: row.total
+  };
 }

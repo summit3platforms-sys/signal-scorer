@@ -70,9 +70,11 @@ export default function SignalCard({ signal, livePrice }) {
       } else {
         const err = await res.json();
         console.error('Failed to send:', err.error);
+        alert(`Failed to send: ${err.error || err.message}`);
       }
     } catch (err) {
       console.error('Error sending to Telegram:', err);
+      alert(`Network error: ${err.message}. Is the backend running?`);
     } finally {
       setIsSending(false);
     }

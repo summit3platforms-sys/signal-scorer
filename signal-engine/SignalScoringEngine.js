@@ -105,13 +105,14 @@ export class SignalScoringEngine {
   }
 
   /**
-   * Scores a symbol based on 15m and 1h candles.
+   * Scores a symbol based on 15m, 1h, and 4h candles.
    * @param {string} symbol 
    * @param {Array} candles15m 
    * @param {Array} candles1h 
-   * @returns {Object|null} SignalResult or null if insufficient data / ranging market.
+   * @param {Array|null} candles4h 
+   * @returns {Object|null} SignalResult or null if insufficient data / ranging market / counter-trend.
    */
-  scoreSymbol(symbol, candles15m, candles1h) {
+  scoreSymbol(symbol, candles15m, candles1h, candles4h = null) {
     if (!candles15m || candles15m.length < 200 || !candles1h || candles1h.length < 200) {
       return null;
     }
@@ -130,6 +131,20 @@ export class SignalScoringEngine {
     // ADX < 20 on BOTH timeframes = ranging market = noise. Skip entirely.
     if (ind15m.adx.adx < this.config.adxTrendThreshold && ind1h.adx.adx < this.config.adxTrendThreshold) {
       return null; // Market is ranging — no edge
+    }
+
+    // ── Multi-Timeframe Confluence Filter (4h) ───────────────────────────
+    // Only signal when 4h trend agrees with the 15m/1h direction.
+    // Eliminates the single biggest source of counter-trend false signals.
+    let htfBias = 'NEUTRAL'; // will be set if 4h candles available
+    if (candles4h && candles4h.length >= 50) {
+      const ind4h = calculateIndicators(candles4h);
+      if (ind4h) {
+        const bullish4h = ind4h.price > ind4h.ema200 && ind4h.ema9 > ind4h.ema21;
+        const bearish4h = ind4h.price < ind4h.ema200 && ind4h.ema9 < ind4h.ema21;
+        if (bullish4h) htfBias = 'LONG';
+        else if (bearish4h) htfBias = 'SHORT';
+      }
     }
 
     let regime = "ranging";
@@ -163,6 +178,13 @@ export class SignalScoringEngine {
     if (longVotes >= 3) direction = 'LONG';
     else if (shortVotes >= 3) direction = 'SHORT';
     else direction = longVotes > shortVotes ? 'LONG' : 'SHORT';
+
+    // ── 4h Confluence Gate ───────────────────────────────────────────────
+    // If 4h has a clear bias that conflicts with our signal direction, kill it.
+    // If 4h is NEUTRAL (not enough data), allow the signal through.
+    if (htfBias !== 'NEUTRAL' && htfBias !== direction) {
+      return null; // Counter-trend to 4h — no edge
+    }
 
     // ── Decorrelated Score Calculation ───────────────────────────────────
     // Only count sub-scores that align with the majority direction
@@ -198,6 +220,7 @@ export class SignalScoringEngine {
     return {
       symbol,
       direction,
+      htfBias,  // 'LONG' | 'SHORT' | 'NEUTRAL'
       score: totalScore,
       confidence,
       subScores: { trend, momentum, volume, structure, pattern: patternScore },
@@ -219,7 +242,7 @@ export class SignalScoringEngine {
     for (const symbol of symbols) {
       const c = candleMap.get(symbol);
       if (c && c['15m'] && c['1h']) {
-        const res = this.scoreSymbol(symbol, c['15m'], c['1h']);
+        const res = this.scoreSymbol(symbol, c['15m'], c['1h'], c['4h'] || null);
         if (res) results.push(res);
       }
     }

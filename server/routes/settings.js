@@ -32,11 +32,11 @@ router.post('/purge', (req, res) => {
   try {
     purgeAllData();
     // Clear in-memory signal cache so the UI updates immediately
-    setSignals([], { scannedAt: new Date().toISOString(), totalPairs: 0, scanDurationMs: 0 });
+    setSignals([], { scannedAt: null, totalPairs: 0, scanDurationMs: 0 });
     // Push empty state to all connected clients
     const io = req.app.get('io');
     if (io) {
-      io.emit('signals:update', { signals: [], scannedAt: new Date().toISOString(), totalPairs: 0, stats: { totalSignals: 0, winRate: 0, tp2HitRate: 0, stopLosses: 0, accuracy: 0 } });
+      io.emit('signals:update', { signals: [], scannedAt: null, totalPairs: 0, stats: { totalSignals: 0, winRate: 0, tp2HitRate: 0, stopLosses: 0, accuracy: 0 } });
     }
     console.log('[API] Purge successful.');
     res.json({ success: true, message: 'All data purged successfully.' });
