@@ -1,6 +1,6 @@
 ==================================================
 PROJECT: Signal Scorer Pro
-LAST UPDATED: 2026-05-19 20:10:00 IST
+LAST UPDATED: 2026-05-19 20:17:00 IST
 ==================================================
 
 CURRENT TECH STACK
@@ -240,6 +240,7 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 20. DYNAMIC MINSCORE CACHE RESOLUTION: Fixed a backend bug where getSignals() fell back to a hardcoded default minimum score of 60 when triggered with no parameters (such as in WebSocket broadcasts and initial route mounting). Refactored cache.js to dynamically resolve the minimum score against active SQLite user settings (e.g. 5), allowing lower scoring signals to populate correctly without being discarded.
 21. WEBSOCKET TICKER OBJECT EXTRACTION: Fixed a critical price tracking bug where the centralized WebSocket mini-ticker stream stored objects `{ price: closePrice, change24h: changePercent }` inside the price map cache, but processPriceUpdate() and WebSocket broadcasts emitted the object directly instead of extracting the primitive numeric price. This caused arithmetic comparisons against entries/levels to evaluate to NaN (preventing TP/SL active resolutions) and resulted in a $[object Object] visual render bug on the frontend ticker tape and signal cards. Refactored server/cronJobs.js to correctly extract and map the numeric price properties.
 22. ADVANCED TRADING PERFORMANCE METRICS: Redesigned the top statistics display of the dashboard to align with institutional-grade risk management. Separated TP1 and TP2 tracking rates: mapped TP1 Hit Rate to all signals touching TP1 (tp1TouchRate) and TP2 Hit Rate to full target completions (tp2HitRate). Upgraded Overall Accuracy to a Weighted Win Rate where TP2 hits receive a 1.0 weight, TP1-only hits receive a 0.5 weight, and immediate Stop Losses receive 0.0 weight. Calculated and introduced mathematical Expectancy (E) directly from historical signal percentage returns, enabling instant evaluation of trading system profitability. Refactored server/services/database.js, StatsBar.jsx, and signalStore.js.
+23. PAIR SYMBOL REAL-TIME FILTER: Added a case-insensitive search bar directly within the active signals filter bar. Configured the Zustand global store (`src/store/signalStore.js`) to support dynamic `search` filters and optimized `applyFilters()` to process active list text queries instantaneously on the client-side. Styled the new element with premium placeholder guides and built-in search clearing actions using Lucide icons inside `src/components/FilterBar.jsx`.
 ==================================================
 TODO FEATURES
 --------------------------------------------------

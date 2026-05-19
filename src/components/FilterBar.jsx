@@ -1,9 +1,33 @@
+import { Search, X } from 'lucide-react';
+
 export default function FilterBar({ filters, setFilter, total, showing }) {
   const directions = ['ALL', 'LONG', 'SHORT'];
   const timeframes = ['5m', '15m', '1h', '4h'];
 
   return (
     <div className="flex flex-wrap items-center gap-4 bg-[#0f1923] border border-[#1e2d40] rounded-xl px-4 py-3">
+      {/* Search Bar */}
+      <div className="relative flex items-center min-w-[180px] max-w-[260px] flex-1">
+        <span className="absolute left-3 text-gray-500">
+          <Search size={16} />
+        </span>
+        <input
+          type="text"
+          placeholder="Search pair (e.g. BTC)..."
+          value={filters.search || ''}
+          onChange={e => setFilter('search', e.target.value)}
+          className="w-full pl-9 pr-8 py-1.5 rounded-lg bg-[#0a0e17] text-sm text-white placeholder-gray-600 border border-[#1e2d40] focus:outline-none focus:border-[#00d4aa] transition-all font-mono"
+        />
+        {filters.search && (
+          <button
+            onClick={() => setFilter('search', '')}
+            className="absolute right-2.5 text-gray-500 hover:text-white transition-colors"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
       {/* Direction Toggle */}
       <div className="flex gap-1 bg-[#0a0e17] rounded-lg p-1">
         {directions.map(d => (

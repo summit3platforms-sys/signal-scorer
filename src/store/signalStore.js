@@ -9,6 +9,12 @@ function applyFilters(signals, filters) {
     result = result.filter(s => s.direction === filters.direction);
   }
   result = result.filter(s => s.score >= filters.minScore);
+  
+  if (filters.search && filters.search.trim() !== '') {
+    const term = filters.search.toLowerCase().trim();
+    result = result.filter(s => s.symbol.toLowerCase().includes(term));
+  }
+  
   return result;
 }
 
@@ -18,7 +24,7 @@ export const useSignalStore = create((set, get) => ({
   tradeHistory: [],
   systemNotes: '',
   stats: { totalSignals: 0, accuracy: 0, tp1TouchRate: 0, tp2HitRate: 0, stopLosses: 0, expectancy: 0 },
-  filters: { direction: 'ALL', minScore: 60, timeframe: '15m' },
+  filters: { direction: 'ALL', minScore: 60, timeframe: '15m', search: '' },
   prices: {},
   scanStatus: { isScanning: false, lastScanAt: null, totalPairs: 0, countdown: 300 },
   isConnected: false,
