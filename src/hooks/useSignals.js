@@ -28,7 +28,7 @@ export function useSignals({ direction = 'ALL', minScore = 0, interval = '5m' } 
 
   const rescan = useCallback(async () => {
     setMeta(m => m ? { ...m, status: 'scanning' } : { status: 'scanning' })
-    await fetch('/api/signals/rescan', {
+    await fetch('/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ interval }),
