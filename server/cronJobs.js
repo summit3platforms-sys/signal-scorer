@@ -64,23 +64,8 @@ export async function runFullScan(io) {
     const rawResults = engine.scoreMultiple(symbols, candleMap);
     const scored = rawResults.filter(s => s && s.score >= engine.getConfig().thresholds.minScore);
 
-    // ── 12-Hour Deduplication ──────────────────────────────────────────
-    // If a signal for SYMBOL was already generated within the
-    // last 12 hours, skip it. This prevents spamming the same trade idea
-    // across consecutive 5-minute scan cycles and prevents whipsawing.
-    const recentKeys = getRecentSignalKeys(12 * 60 * 60 * 1000);
-    const actionable = scored.filter(s => {
-      const key = s.symbol;
-      if (recentKeys.has(key)) {
-        return false; // Already signalled within 12h — skip
-      }
-      return true;
-    });
+    const actionable = [...scored];
     actionable.sort((a, b) => b.score - a.score);
-
-    if (scored.length !== actionable.length) {
-      console.log(`[Scanner] Dedup: ${scored.length - actionable.length} signals skipped (already signalled within 12h)`);
-    }
 
     // Step 5: Get tickers for price/volume enrichment (single bulk call — already cached)
     const tickers = await getAllTickers();
