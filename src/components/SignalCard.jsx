@@ -134,7 +134,7 @@ export default function SignalCard({ signal, livePrice }) {
         <div className="text-emerald-300">${fmtPrice(signal.tp1)}</div>
         <div className="text-emerald-400">TP2</div>
         <div className="text-emerald-300">${fmtPrice(signal.tp2)}</div>
-        <div className="text-gray-400">R/R</div>
+        <div className="text-gray-400">R:R</div>
         <div className="text-white">{signal.riskReward}x</div>
       </div>
 
