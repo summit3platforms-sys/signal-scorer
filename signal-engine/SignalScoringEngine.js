@@ -17,9 +17,9 @@ export const SCORING_CONFIG = {
     alertScore: 75
   },
   atrMultipliers: {
-    stopLoss: 1.5,       // 1.5x ATR — tighter, Kelly-inspired
-    takeProfit1: 2.0,    // 2:1 R:R minimum
-    takeProfit2: 3.5     // 3.5:1 for runners
+    stopLoss: 2.0,
+    takeProfit1: 2.5,
+    takeProfit2: 4.5
   },
   adxTrendThreshold: 20,  // Lowered from 25 — skip pairs below this (pure chop)
   adxStrongTrend: 30,     // Bonus awarded above this level

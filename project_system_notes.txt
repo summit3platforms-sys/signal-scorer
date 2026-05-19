@@ -229,6 +229,7 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 9. 4H MULTI-TIMEFRAME TREND CONFLUENCE: Integrated a high-order 4h trend filter in `SignalScoringEngine.js` using EMA(9)/EMA(21) alignments and EMA(200) prices. Dynamically filters out short-term counter-trend signals to eliminate whipsaws and elevate edge.
 10. PM2 PRODUCTION DAEMON ECOSYSTEM: Added custom `ecosystem.config.js` to manage process lifecycles, memory boundaries (512MB), graceful shutdown (5s), structured system logging `/var/log/signal-scorer/`, systemd boot survivability, and configured public listener to use PORT 9000 to match VPS Nginx reverse proxy firewall rules.
 11. R:R NOTATION ALIGNMENT: Aligned all occurrences of the Risk-to-Reward ratio to use standard `R:R` notation instead of `R/R` uniformly across the Telegram alert templates, Gemini AI validator prompts, and frontend Signal Cards for premium branding.
+12. ROBUST ATR SCORING MULTIPLIERS: Optimized default ATR trade parameters (Stop Loss widened to 2.0x, TP1 expanded to 2.5x, TP2 expanded to 4.5x) inside `SignalScoringEngine.js` to mitigate premature noise stop-outs and accommodate market swing tolerances.
 
 ==================================================
 TODO FEATURES
