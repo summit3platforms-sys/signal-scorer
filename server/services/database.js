@@ -138,23 +138,36 @@ export function updateSettings(newSettings) {
 export function insertSignals(signalsArray) {
   const conn = getDB();
 
-  // Fetch all symbols that currently have an ACTIVE signal
-  const activeSymbols = new Set(
-    conn.prepare(`SELECT symbol FROM signals WHERE status = 'ACTIVE'`).all().map(r => r.symbol)
+  // Block the same symbol from re-firing within 30 minutes
+  // This prevents spam without blocking legitimate new signals after TP/SL closes
+  const cooldownMs = 30 * 60 * 1000;
+  const cutoff = Date.now() - cooldownMs;
+
+  const recentSymbols = new Set(
+    conn.prepare(`
+      SELECT symbol FROM signals
+      WHERE createdAt > ?
+    `).all(cutoff).map(r => r.symbol)
   );
 
-  // Filter out any signal whose symbol is already active
-  const deduplicated = signalsArray.filter(sig => !activeSymbols.has(sig.symbol));
+  const deduplicated = signalsArray.filter(sig => !recentSymbols.has(sig.symbol));
 
   if (deduplicated.length === 0) {
-    console.log('[Database] insertSignals: all signals deduplicated, nothing to insert.');
+    console.log('[Database] insertSignals: all signals within 30min cooldown, nothing to insert.');
     return 0;
+  }
+
+  // Attach empirical win-rate from last 30 days to each signal
+  for (const sig of deduplicated) {
+    const hist = getSymbolWinRate(sig.symbol, sig.direction);
+    sig.historicalWinRate = hist ? hist.winRate : null;
+    sig.historicalSampleSize = hist ? hist.sampleSize : null;
   }
 
   const insert = conn.prepare(`
     INSERT OR REPLACE INTO signals 
-    (id, symbol, direction, score, confidence, entry, tp1, tp2, stopLoss, status, tp1Hit, createdAt, reasons, subScores, historicalWinRate, historicalSampleSize)
-    VALUES (@id, @symbol, @direction, @score, @confidence, @entry, @tp1, @tp2, @stopLoss, @status, @tp1Hit, @createdAt, @reasons, @subScores, @historicalWinRate, @historicalSampleSize)
+    (id, symbol, direction, score, confidence, entry, tp1, tp2, stopLoss, status, createdAt, reasons, subScores, historicalWinRate, historicalSampleSize, tp1Hit)
+    VALUES (@id, @symbol, @direction, @score, @confidence, @entry, @tp1, @tp2, @stopLoss, @status, @createdAt, @reasons, @subScores, @historicalWinRate, @historicalSampleSize, @tp1Hit)
   `);
 
   const insertMany = conn.transaction((signals) => {
@@ -170,27 +183,20 @@ export function insertSignals(signalsArray) {
         tp2: sig.tp2,
         stopLoss: sig.stopLoss,
         status: 'ACTIVE',
-        tp1Hit: 0,
         createdAt: sig.timestamp,
         reasons: JSON.stringify(sig.reasons),
         subScores: JSON.stringify(sig.subScores),
         historicalWinRate: sig.historicalWinRate ?? null,
-        historicalSampleSize: sig.historicalSampleSize ?? null
+        historicalSampleSize: sig.historicalSampleSize ?? null,
+        tp1Hit: 0
       });
     }
   });
 
-  // Attach empirical win-rate from last 30 days to each signal
-  for (const sig of deduplicated) {
-    const hist = getSymbolWinRate(sig.symbol, sig.direction);
-    sig.historicalWinRate = hist ? hist.winRate : null;
-    sig.historicalSampleSize = hist ? hist.sampleSize : null;
-  }
-
   insertMany(deduplicated);
   invalidateActiveSignalsCache();
 
-  console.log(`[Database] Inserted ${deduplicated.length} new signals (${signalsArray.length - deduplicated.length} duplicates skipped).`);
+  console.log(`[Database] Inserted ${deduplicated.length} new signals (${signalsArray.length - deduplicated.length} within cooldown, skipped).`);
   return deduplicated.length;
 }
 
