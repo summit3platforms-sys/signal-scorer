@@ -135,6 +135,8 @@ export async function runFullScan(io) {
   } finally {
     isScanning = false;
   }
+}
+
 // ---------------------------------------------------------
 // PRICE TRACKING via centralized WebSocket module
 // ---------------------------------------------------------
