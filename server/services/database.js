@@ -104,9 +104,9 @@ export function getSettings() {
 
 export function updateSettings(newSettings) {
   const conn = getDB();
-  const update = conn.prepare(`UPDATE settings SET value = ? WHERE key = ?`);
+  const update = conn.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`);
   const tx = conn.transaction(() => {
-    for (const [k, v] of Object.entries(newSettings)) update.run(v.toString(), k);
+    for (const [k, v] of Object.entries(newSettings)) update.run(k, v.toString());
   });
   tx();
 }
