@@ -363,7 +363,25 @@ export function purgeAllData() {
   const tx = conn.transaction(() => {
     conn.prepare(`DELETE FROM signals`).run();
     conn.prepare(`DELETE FROM error_logs`).run();
-    console.log('[Database] ⚠️ ALL data purged (signals + error logs).');
+    conn.prepare(`DELETE FROM settings`).run();
+
+    const seedSettings = {
+      emaAlignment: '0.25',
+      rsiZone: '0.20',
+      macdMomentum: '0.20',
+      volumeSurge: '0.15',
+      bollingerPos: '0.10',
+      atrFilter: '0.10',
+      minScore: '60',
+      cooldownMinutes: '30',
+      atrStopLoss: '2.0',
+      atrTakeProfit1: '2.5',
+      atrTakeProfit2: '4.5'
+    };
+    const insert = conn.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
+    for (const [k, v] of Object.entries(seedSettings)) insert.run(k, v);
+
+    console.log('[Database] ⚠️ ALL data purged (signals + error logs + settings reset to defaults).');
   });
   tx();
   invalidateActiveSignalsCache();
