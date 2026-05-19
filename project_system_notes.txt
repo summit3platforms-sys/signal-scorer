@@ -227,6 +227,7 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 7. DUPLICATE ACTIVE SIGNAL GUARD: Modified `insertSignals` in `database.js` to dynamically reject insertions for symbols that already have an active trade open, preventing whipsaw and spam alerts during high volatility.
 8. EMPIRICAL WIN-RATE LOOKUP: Integrated real-time 30-day historical win-rate calculation inside `insertSignals` (`getSymbolWinRate`). Automatically scans preceding resolved trade statistics for a specific symbol & direction to attach empirical win rates and sample sizes to incoming active signals for high-confidence trading.
 9. 4H MULTI-TIMEFRAME TREND CONFLUENCE: Integrated a high-order 4h trend filter in `SignalScoringEngine.js` using EMA(9)/EMA(21) alignments and EMA(200) prices. Dynamically filters out short-term counter-trend signals to eliminate whipsaws and elevate edge.
+10. PM2 PRODUCTION DAEMON ECOSYSTEM: Added custom `ecosystem.config.js` to manage process lifecycles, memory boundaries (512MB), graceful shutdown (5s), structured system logging `/var/log/signal-scorer/`, systemd boot survivability, and configured public listener to use PORT 9000 to match VPS Nginx reverse proxy firewall rules.
 
 ==================================================
 TODO FEATURES
