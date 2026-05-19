@@ -177,8 +177,9 @@ function processPriceUpdate(io, prices) {
     let statsChanged = false;
 
     for (const sig of activeSignals) {
-      const livePrice = prices.get(sig.symbol);
-      if (!livePrice) continue;
+      const ticker = prices.get(sig.symbol);
+      if (!ticker) continue;
+      const livePrice = ticker.price;
 
       // Expire signals older than 24 hours
       if (now - sig.createdAt > 24 * 60 * 60 * 1000) {
@@ -229,8 +230,8 @@ function processPriceUpdate(io, prices) {
       const now2 = Date.now();
       if (now2 - lastEmitTime >= 2000) {
         const pricesObj = {};
-        for (const [sym, price] of prices.entries()) {
-          pricesObj[sym] = { price };
+        for (const [sym, ticker] of prices.entries()) {
+          pricesObj[sym] = { price: ticker.price };
         }
         io.emit('price:update', pricesObj);
         lastEmitTime = now2;

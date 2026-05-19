@@ -1,6 +1,6 @@
 ==================================================
 PROJECT: Signal Scorer Pro
-LAST UPDATED: 2026-05-19 19:43:00 IST
+LAST UPDATED: 2026-05-19 19:52:00 IST
 ==================================================
 
 CURRENT TECH STACK
@@ -238,6 +238,7 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 18. MANUAL SCAN ROUTE CORRECTION: Resolved a critical mismatch where the frontend's manual rescan action was targeting `/api/signals/rescan` (returning a 404), rendering manual dashboard rescans silent. Re-routed to the correct active endpoint `/api/scan` to ensure seamless, real-time manual triggers.
 19. REAL-TIME LIVE SCANNER TERMINAL: Developed an in-memory sliding logs buffer (`scannerLogBuffer`) to record scanner steps and engine metrics. Mounted a dedicated `GET /api/logs/scanner` REST endpoint and configured real-time WebSocket broadcasting over `scan:log`. Designed and integrated a premium green-on-black scrolling terminal console tab on the dashboard, providing full visibility into technical scans.
 20. DYNAMIC MINSCORE CACHE RESOLUTION: Fixed a backend bug where getSignals() fell back to a hardcoded default minimum score of 60 when triggered with no parameters (such as in WebSocket broadcasts and initial route mounting). Refactored cache.js to dynamically resolve the minimum score against active SQLite user settings (e.g. 5), allowing lower scoring signals to populate correctly without being discarded.
+21. WEBSOCKET TICKER OBJECT EXTRACTION: Fixed a critical price tracking bug where the centralized WebSocket mini-ticker stream stored objects `{ price: closePrice, change24h: changePercent }` inside the price map cache, but processPriceUpdate() and WebSocket broadcasts emitted the object directly instead of extracting the primitive numeric price. This caused arithmetic comparisons against entries/levels to evaluate to NaN (preventing TP/SL active resolutions) and resulted in a $[object Object] visual render bug on the frontend ticker tape and signal cards. Refactored server/cronJobs.js to correctly extract and map the numeric price properties.
 ==================================================
 TODO FEATURES
 --------------------------------------------------
