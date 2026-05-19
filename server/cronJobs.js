@@ -142,9 +142,8 @@ function processPriceUpdate(io, prices) {
     let statsChanged = false;
 
     for (const sig of activeSignals) {
-      const priceData = prices.get(sig.symbol);
-      if (!priceData) continue;
-      const livePrice = priceData.price;
+      const livePrice = prices.get(sig.symbol);
+      if (!livePrice) continue;
 
       // Expire signals older than 24 hours
       if (now - sig.createdAt > 24 * 60 * 60 * 1000) {
@@ -153,48 +152,63 @@ function processPriceUpdate(io, prices) {
         continue;
       }
 
-      // Check hits
       if (sig.direction === 'LONG') {
+        const profitPct = ((livePrice - sig.entry) / sig.entry) * 100;
+
         if (livePrice >= sig.tp2) {
-          updateSignalStatus(sig.id, 'WIN_TP2', now, ((livePrice - sig.entry) / sig.entry) * 100);
+          // Full winner — close completely
+          updateSignalStatus(sig.id, 'WIN_TP2', now, profitPct);
           statsChanged = true;
-        } else if (livePrice >= sig.tp1) {
-          updateSignalStatus(sig.id, 'WIN_TP1', now, ((livePrice - sig.entry) / sig.entry) * 100);
+        } else if (livePrice >= sig.tp1 && sig.tp1Hit === 0) {
+          // TP1 touched for first time — move SL to breakeven, stay active
+          updateSignalStatus(sig.id, 'WIN_TP1', now, profitPct);
           statsChanged = true;
         } else if (livePrice <= sig.stopLoss) {
-          updateSignalStatus(sig.id, 'LOSS_SL', now, ((livePrice - sig.entry) / sig.entry) * 100);
+          // Hit stop loss (either original SL or breakeven after TP1)
+          const finalPct = sig.tp1Hit === 1
+            ? 0  // breakeven — SL was moved to entry after TP1
+            : profitPct;
+          updateSignalStatus(sig.id, 'LOSS_SL', now, finalPct);
           statsChanged = true;
         }
+
       } else {
         // SHORT
+        const profitPct = ((sig.entry - livePrice) / sig.entry) * 100;
+
         if (livePrice <= sig.tp2) {
-          updateSignalStatus(sig.id, 'WIN_TP2', now, ((sig.entry - livePrice) / sig.entry) * 100);
+          updateSignalStatus(sig.id, 'WIN_TP2', now, profitPct);
           statsChanged = true;
-        } else if (livePrice <= sig.tp1) {
-          updateSignalStatus(sig.id, 'WIN_TP1', now, ((sig.entry - livePrice) / sig.entry) * 100);
+        } else if (livePrice <= sig.tp1 && sig.tp1Hit === 0) {
+          updateSignalStatus(sig.id, 'WIN_TP1', now, profitPct);
           statsChanged = true;
         } else if (livePrice >= sig.stopLoss) {
-          updateSignalStatus(sig.id, 'LOSS_SL', now, ((sig.entry - livePrice) / sig.entry) * 100);
+          const finalPct = sig.tp1Hit === 1 ? 0 : profitPct;
+          updateSignalStatus(sig.id, 'LOSS_SL', now, finalPct);
           statsChanged = true;
         }
       }
     }
 
     if (io) {
-      // Throttle front-end emissions to ~2 seconds to avoid flooding UI clients
-      if (now - lastEmitTime >= 2000) {
+      const now2 = Date.now();
+      if (now2 - lastEmitTime >= 2000) {
         const pricesObj = {};
-        for (const [sym, data] of prices.entries()) {
-          pricesObj[sym] = data;
+        for (const [sym, price] of prices.entries()) {
+          pricesObj[sym] = { price };
         }
         io.emit('price:update', pricesObj);
-        lastEmitTime = now;
+        lastEmitTime = now2;
       }
 
-      // If TP/SL was hit, immediately emit signal update
       if (statsChanged) {
         const { signals, stats, meta } = getSignals();
-        io.emit('signals:update', { signals, scannedAt: meta.scannedAt, totalPairs: meta.totalPairs, stats });
+        io.emit('signals:update', {
+          signals,
+          scannedAt: meta?.scannedAt,
+          totalPairs: meta?.totalPairs,
+          stats
+        });
       }
     }
   } catch (err) {
