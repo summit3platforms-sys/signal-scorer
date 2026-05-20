@@ -15,7 +15,9 @@ import healthRouter from './routes/health.js';
 import telegramRouter from './routes/telegram.js';
 import logsRouter from './routes/logs.js';
 import waitlistRouter from './routes/waitlist.js';
+import authRouter from './routes/auth.js';
 
+import { initAuthTables } from './services/auth.js';
 import { initCronJobs, runFullScan } from './cronJobs.js';
 import { initBot } from '../lib/telegram.js';
 import { getSignals } from './cache.js';
@@ -35,6 +37,7 @@ app.use(cors());
 app.use(express.json());
 
 // ── API Routes ────────────────────────────────────────────────────────────
+app.use('/api/auth', authRouter);
 app.use('/api/scan', scanRouter);
 app.use('/api/signals', signalsRouter);
 app.use('/api/webhook', webhookRouter);
@@ -91,6 +94,8 @@ io.on('connection', (socket) => {
 // ── Boot ──────────────────────────────────────────────────────────────────
 httpServer.listen(PORT, () => {
   console.log(`\n🚀 Signal Scorer Pro API running on http://localhost:${PORT}`);
+  // Init SQLite users schema and seed master admin account
+  initAuthTables();
   initBot(() => runFullScan(io), (filters) => getSignals(filters));
   initCronJobs(io);
 });

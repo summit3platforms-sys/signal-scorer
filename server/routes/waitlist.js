@@ -1,47 +1,75 @@
 import express from 'express';
-import { getDB } from '../services/database.js';
+import { 
+  createUserFromWaitlist, 
+  getAllUsers, 
+  updateUserRole, 
+  deleteUser 
+} from '../services/auth.js';
 
 const router = express.Router();
 
+// Middleware to protect administrative routes
+const requireAdmin = (req, res, next) => {
+  const userId = req.headers['x-user-id'];
+  if (userId !== 'QC25101') {
+    return res.status(403).json({ error: 'Forbidden: Access restricted to master admin' });
+  }
+  next();
+};
+
+// POST /api/waitlist — Register a new signup from waitlist (public)
 router.post('/', (req, res) => {
   try {
     const { email, referral } = req.body;
     if (!email || !email.includes('@')) {
-      return res.status(400).json({ error: 'Invalid email' });
+      return res.status(400).json({ error: 'Invalid email address' });
     }
-    const conn = getDB();
 
-    // Create table if not exists
-    conn.exec(`
-      CREATE TABLE IF NOT EXISTS waitlist (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
-        referral TEXT,
-        createdAt INTEGER NOT NULL
-      )
-    `);
-
-    // Insert — ignore duplicate emails silently
-    conn.prepare(`
-      INSERT OR IGNORE INTO waitlist (email, referral, createdAt)
-      VALUES (?, ?, ?)
-    `).run(email.toLowerCase().trim(), referral || null, Date.now());
-
-    console.log(`[Waitlist] New signup: ${email} referral: ${referral || 'none'}`);
-    res.json({ success: true });
+    const uniqueId = createUserFromWaitlist(email, referral);
+    res.json({ success: true, uniqueId });
   } catch (err) {
-    console.error('[Waitlist] Error:', err.message);
+    console.error('[WaitlistRoute] POST error:', err.message);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// GET /api/waitlist — master only, returns all signups
-router.get('/', (req, res) => {
+// GET /api/waitlist — Get all users (admin only)
+router.get('/', requireAdmin, (req, res) => {
   try {
-    const conn = getDB();
-    const rows = conn.prepare(`SELECT * FROM waitlist ORDER BY createdAt DESC`).all();
-    res.json({ total: rows.length, entries: rows });
+    const users = getAllUsers();
+    res.json({ total: users.length, entries: users });
   } catch (err) {
+    console.error('[WaitlistRoute] GET error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/waitlist/:uniqueId/role — Update user role (admin only)
+router.patch('/:uniqueId/role', requireAdmin, (req, res) => {
+  try {
+    const { uniqueId } = req.params;
+    const { role } = req.body;
+
+    if (!role || !['master', 'user', 'pending'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    updateUserRole(uniqueId, role);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[WaitlistRoute] PATCH error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/waitlist/:uniqueId — Delete user (admin only)
+router.delete('/:uniqueId', requireAdmin, (req, res) => {
+  try {
+    const { uniqueId } = req.params;
+    deleteUser(uniqueId);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[WaitlistRoute] DELETE error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

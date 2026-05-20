@@ -6,6 +6,7 @@ export default function LandingPage() {
   const [email, setEmail] = useState('');
   const [referral, setReferral] = useState('');
   const [status, setStatus] = useState('idle'); // idle | loading | success | error
+  const [uniqueId, setUniqueId] = useState('');
 
   const handleSubmit = async () => {
     if (!email || !email.includes('@')) return;
@@ -16,8 +17,13 @@ export default function LandingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, referral: referral.trim() || null })
       });
-      if (res.ok) setStatus('success');
-      else setStatus('error');
+      if (res.ok) {
+        const data = await res.json();
+        setUniqueId(data.uniqueId || '');
+        setStatus('success');
+      } else {
+        setStatus('error');
+      }
     } catch {
       setStatus('error');
     }
@@ -113,7 +119,7 @@ export default function LandingPage() {
           {/* Right: Login & CTA Buttons */}
           <div className="flex items-center gap-4">
             <Link 
-              to="/dashboard"
+              to="/login"
               className="text-gray-300 hover:text-[#00d4aa] font-semibold text-sm transition-all"
             >
               Login
@@ -402,6 +408,31 @@ export default function LandingPage() {
                 </>
               )}
             </button>
+
+            {status === 'success' && uniqueId && (
+              <div className="mt-6 p-6 rounded-2xl bg-[#f0b429]/10 border border-[#f0b429]/30 text-center space-y-4">
+                <div className="text-sm font-semibold text-[#f0b429] uppercase tracking-wider">
+                  Your Private Access ID
+                </div>
+                <div className="flex items-center justify-center gap-3">
+                  <span className="font-mono text-2xl font-bold tracking-widest text-white bg-black/50 px-4 py-2 rounded-lg border border-white/10 select-all">
+                    {uniqueId}
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(uniqueId);
+                      alert('Access ID copied to clipboard!');
+                    }}
+                    className="px-3 py-2 rounded-lg bg-[#f0b429] text-black font-semibold text-xs transition-all hover:bg-yellow-400"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto leading-relaxed">
+                  ⚠️ <strong className="text-white">Save this code!</strong> You will need this Access ID along with your email to log into the system once your request is approved by the admin.
+                </p>
+              </div>
+            )}
 
             {/* Note text below button */}
             <div className="flex items-center gap-2 justify-center text-xs text-gray-500 pt-2 font-medium">

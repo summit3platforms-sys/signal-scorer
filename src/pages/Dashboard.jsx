@@ -1,6 +1,20 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, Zap, HelpCircle, Activity, History, FileText, Settings, Stethoscope, AlertOctagon, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  RefreshCw, 
+  Zap, 
+  HelpCircle, 
+  Activity, 
+  History, 
+  FileText, 
+  Settings, 
+  Stethoscope, 
+  AlertOctagon, 
+  Users,
+  LogOut
+} from 'lucide-react';
 import { useSignalStore } from '../store/signalStore.js';
+import { useAuthStore } from '../store/authStore.js';
 import StatsBar from '../components/StatsBar.jsx';
 import FilterBar from '../components/FilterBar.jsx';
 import SignalCard from '../components/SignalCard.jsx';
@@ -11,7 +25,7 @@ import HistoryTable from '../components/HistoryTable.jsx';
 import SettingsTab from '../components/SettingsTab.jsx';
 import HealthTab from '../components/HealthTab.jsx';
 import ErrorLogsTab from '../components/ErrorLogsTab.jsx';
-import WaitlistTab from '../components/WaitlistTab.jsx';
+import UsersTab from '../components/UsersTab.jsx';
 
 function formatLastScan(isoStr) {
   if (!isoStr) return 'Never';
@@ -26,12 +40,16 @@ function formatLastScan(isoStr) {
 
 export default function Dashboard() {
   const { 
-    signals, filteredSignals, tradeHistory, systemNotes, errorLogs, stats, filters, prices, 
+    signals, filteredSignals, tradeHistory, systemNotes, stats, filters, prices, 
     scanStatus, isConnected, initSocket, setFilter, triggerScan, fetchHistory, fetchSystemNotes, fetchErrorLogs 
   } = useSignalStore();
+
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const navigate = useNavigate();
   
   const [showModal, setShowModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('ACTIVE'); // 'ACTIVE', 'HISTORY', 'NOTES'
+  const [activeTab, setActiveTab] = useState('ACTIVE');
 
   useEffect(() => {
     initSocket();
@@ -42,14 +60,19 @@ export default function Dashboard() {
       fetchHistory();
     } else if (activeTab === 'NOTES') {
       fetchSystemNotes();
-    } else if (activeTab === 'ERRORS') {
+    } else if (activeTab === 'ERRORS' && user?.role === 'master') {
       fetchErrorLogs();
     }
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   const handleRescan = () => {
     triggerScan();
     setActiveTab('ACTIVE');
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -58,16 +81,27 @@ export default function Dashboard() {
       {/* Sticky Header */}
       <header className="sticky top-0 z-40 bg-[#0a0e17]/90 backdrop-blur-md border-b border-[#1e2d40] px-6 py-3">
         <div className="max-w-screen-2xl mx-auto flex items-center justify-between gap-4 flex-wrap">
-          {/* Left: Logo */}
-          <div>
-            <div className="flex items-center gap-2">
-              <Zap className="text-[#00d4aa]" size={22} />
-              <span className="text-lg font-bold text-white tracking-tight">Signal Scorer <span className="text-[#00d4aa]">Pro</span></span>
+          {/* Left: Logo and Active User Badge */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2">
+                <Zap className="text-[#00d4aa]" size={22} />
+                <span className="text-lg font-bold text-white tracking-tight">Signal Scorer <span className="text-[#00d4aa]">Pro</span></span>
+              </div>
+              <div className="text-[10px] text-gray-600 tracking-widest uppercase mt-0.5">Binance USDT Futures Intelligence</div>
             </div>
-            <div className="text-[10px] text-gray-600 tracking-widest uppercase mt-0.5">Binance USDT Futures Intelligence</div>
+
+            {user && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/[0.03] border border-white/5 rounded-full text-xs">
+                <span className="font-mono text-gray-500 font-medium">Account:</span>
+                <span className="font-mono font-bold text-[#f0b429]">{user.uniqueId}</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#00d4aa]" />
+                <span className="font-bold text-gray-300 uppercase text-[10px] tracking-wider">{user.role}</span>
+              </div>
+            )}
           </div>
 
-          {/* Right: Status Controls */}
+          {/* Right: Status Controls and Logout */}
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1.5">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-600'}`} />
@@ -101,6 +135,17 @@ export default function Dashboard() {
             <button onClick={() => setShowModal(true)} className="text-gray-500 hover:text-white transition-colors">
               <HelpCircle size={18} />
             </button>
+
+            <div className="h-6 w-[1px] bg-white/10 mx-1 hidden sm:block" />
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 text-sm bg-red-500/10 border border-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-all font-semibold"
+              title="Logout from platform"
+            >
+              <LogOut size={14} />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
           </div>
         </div>
       </header>
@@ -127,6 +172,7 @@ export default function Dashboard() {
               {signals.length}
             </span>
           </button>
+          
           <button
             onClick={() => setActiveTab('HISTORY')}
             className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
@@ -135,6 +181,7 @@ export default function Dashboard() {
           >
             <History size={16} /> Trade History
           </button>
+          
           <button
             onClick={() => setActiveTab('NOTES')}
             className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
@@ -143,38 +190,47 @@ export default function Dashboard() {
           >
             <FileText size={16} /> System Notes
           </button>
-          <button
-            onClick={() => setActiveTab('SETTINGS')}
-            className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-              activeTab === 'SETTINGS' ? 'border-[#00d4aa] text-[#00d4aa]' : 'border-transparent text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            <Settings size={16} /> Settings
-          </button>
-          <button
-            onClick={() => setActiveTab('HEALTH')}
-            className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-              activeTab === 'HEALTH' ? 'border-[#00d4aa] text-[#00d4aa]' : 'border-transparent text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            <Stethoscope size={16} /> System Health
-          </button>
-          <button
-            onClick={() => setActiveTab('ERRORS')}
-            className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-              activeTab === 'ERRORS' ? 'border-[#00d4aa] text-[#00d4aa]' : 'border-transparent text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            <AlertOctagon size={16} /> Error Logs
-          </button>
-          <button
-            onClick={() => setActiveTab('WAITLIST')}
-            className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-              activeTab === 'WAITLIST' ? 'border-[#00d4aa] text-[#00d4aa]' : 'border-transparent text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            <Users size={16} /> Waitlist
-          </button>
+
+          {/* Master Admin Only Tabs */}
+          {user?.role === 'master' && (
+            <>
+              <button
+                onClick={() => setActiveTab('SETTINGS')}
+                className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                  activeTab === 'SETTINGS' ? 'border-[#00d4aa] text-[#00d4aa]' : 'border-transparent text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                <Settings size={16} /> Settings
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('HEALTH')}
+                className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                  activeTab === 'HEALTH' ? 'border-[#00d4aa] text-[#00d4aa]' : 'border-transparent text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                <Stethoscope size={16} /> System Health
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('ERRORS')}
+                className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                  activeTab === 'ERRORS' ? 'border-[#00d4aa] text-[#00d4aa]' : 'border-transparent text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                <AlertOctagon size={16} /> Error Logs
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('USERS')}
+                className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                  activeTab === 'USERS' ? 'border-[#00d4aa] text-[#00d4aa]' : 'border-transparent text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                <Users size={16} /> Users
+              </button>
+            </>
+          )}
         </div>
 
         {/* Tab Content */}
@@ -212,15 +268,15 @@ export default function Dashboard() {
           </div>
         ) : activeTab === 'HISTORY' ? (
           <HistoryTable history={tradeHistory} />
-        ) : activeTab === 'SETTINGS' ? (
+        ) : activeTab === 'SETTINGS' && user?.role === 'master' ? (
           <SettingsTab />
-        ) : activeTab === 'HEALTH' ? (
+        ) : activeTab === 'HEALTH' && user?.role === 'master' ? (
           <HealthTab />
-        ) : activeTab === 'ERRORS' ? (
+        ) : activeTab === 'ERRORS' && user?.role === 'master' ? (
           <ErrorLogsTab />
-        ) : activeTab === 'WAITLIST' ? (
-          <WaitlistTab />
-        ) : (
+        ) : activeTab === 'USERS' && user?.role === 'master' ? (
+          <UsersTab />
+        ) : activeTab === 'NOTES' ? (
           <div className="bg-[#0f1923] border border-[#1e2d40] rounded-xl p-6 animate-fadeSlide">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <FileText className="text-[#00d4aa]" /> Project System Notes
@@ -230,6 +286,12 @@ export default function Dashboard() {
                 {systemNotes || 'Loading notes...'}
               </pre>
             </div>
+          </div>
+        ) : (
+          <div className="text-center py-24 text-red-400">
+            <AlertOctagon size={32} className="mx-auto text-red-500 mb-2" />
+            <p className="text-lg font-bold">Unauthorized Section</p>
+            <p className="text-sm text-gray-500 mt-1">You do not have administrative permissions to view this tab.</p>
           </div>
         )}
 
