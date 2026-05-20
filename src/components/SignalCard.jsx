@@ -54,6 +54,12 @@ export default function SignalCard({ signal, livePrice }) {
     ? ((signal.entry - signal.stopLoss) / signal.entry) * 100 
     : ((signal.stopLoss - signal.entry) / signal.entry) * 100;
 
+  let rr = signal.riskReward;
+  if (!rr || isNaN(rr)) {
+    const risk = Math.abs(signal.entry - signal.stopLoss);
+    rr = risk === 0 ? 0 : parseFloat((Math.abs(signal.tp2 - signal.entry) / risk).toFixed(2));
+  }
+
   const confidenceColors = {
     VERY_HIGH: 'bg-emerald-900 text-emerald-300',
     HIGH: 'bg-blue-900 text-blue-300',
@@ -177,7 +183,7 @@ export default function SignalCard({ signal, livePrice }) {
           <span className="text-[10px] text-emerald-500/80 ml-1">+{tp2Dist.toFixed(2)}%</span>
         </div>
         <div className="text-gray-400">R:R</div>
-        <div className="text-white">{signal.riskReward}x</div>
+        <div className="text-white">{rr}x</div>
       </div>
 
       {/* Gemini verdict if available */}

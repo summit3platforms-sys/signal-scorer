@@ -21,23 +21,27 @@ export function getSignals({ direction, minScore, limit = 200 } = {}) {
   const dbActiveRaw = getActiveSignals();
   
   // Format DB signals to match the in-memory engine result structure
-  const dbActive = dbActiveRaw.map(s => ({
-    symbol: s.symbol,
-    direction: s.direction,
-    score: s.score,
-    confidence: s.confidence,
-    entry: s.entry,
-    tp1: s.tp1,
-    tp2: s.tp2,
-    stopLoss: s.stopLoss,
-    riskReward: s.riskReward,
-    reasons: JSON.parse(s.reasons || '[]'),
-    subScores: JSON.parse(s.subScores || '{}'),
-    regime: s.regime,
-    geminiVerdict: s.geminiVerdict ? JSON.parse(s.geminiVerdict) : null,
-    timestamp: s.createdAt,
-    fromDb: true // flag to identify persistent signals
-  }));
+  const dbActive = dbActiveRaw.map(s => {
+    const risk = Math.abs(s.entry - s.stopLoss);
+    const riskReward = risk === 0 ? 0 : parseFloat((Math.abs(s.tp2 - s.entry) / risk).toFixed(2));
+    return {
+      symbol: s.symbol,
+      direction: s.direction,
+      score: s.score,
+      confidence: s.confidence,
+      entry: s.entry,
+      tp1: s.tp1,
+      tp2: s.tp2,
+      stopLoss: s.stopLoss,
+      riskReward: riskReward || 1.5,
+      reasons: JSON.parse(s.reasons || '[]'),
+      subScores: JSON.parse(s.subScores || '{}'),
+      regime: s.regime,
+      geminiVerdict: s.geminiVerdict ? JSON.parse(s.geminiVerdict) : null,
+      timestamp: s.createdAt,
+      fromDb: true // flag to identify persistent signals
+    };
+  });
 
   // 2. Combine with in-memory scan results, prioritizing active DB signals (persistent)
   const mergedMap = new Map();
