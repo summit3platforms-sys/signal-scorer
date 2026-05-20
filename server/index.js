@@ -14,6 +14,7 @@ import settingsRouter from './routes/settings.js';
 import healthRouter from './routes/health.js';
 import telegramRouter from './routes/telegram.js';
 import logsRouter from './routes/logs.js';
+import waitlistRouter from './routes/waitlist.js';
 
 import { initCronJobs, runFullScan } from './cronJobs.js';
 import { initBot } from '../lib/telegram.js';
@@ -41,6 +42,7 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/health', healthRouter);
 app.use('/api/telegram', telegramRouter);
 app.use('/api/logs', logsRouter);
+app.use('/api/waitlist', waitlistRouter);
 app.get('/api/meta', (_req, res) => res.json({ service: 'Signal Scorer Pro', version: '2.0.0' }));
 
 app.get('/api/system-notes', (_req, res) => {
