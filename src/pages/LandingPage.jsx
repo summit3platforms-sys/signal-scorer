@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CandlestickChart, Activity, Lock, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function LandingPage() {
@@ -109,8 +110,14 @@ export default function LandingPage() {
             </span>
           </div>
 
-          {/* Right: CTA Button */}
-          <div>
+          {/* Right: Login & CTA Buttons */}
+          <div className="flex items-center gap-4">
+            <Link 
+              to="/dashboard"
+              className="text-gray-300 hover:text-[#00d4aa] font-semibold text-sm transition-all"
+            >
+              Login
+            </Link>
             <button 
               onClick={() => document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })}
               className="px-5 py-2.5 rounded-full border border-[#00d4aa] text-[#00d4aa] font-medium text-sm transition-all hover:bg-[#00d4aa]/10 hover:text-white"
