@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { startPriceStream, getStreamReadyState } from '../lib/priceStream.js';
-import { getTopSymbolsByVolume, getMultipleKlines, getAllTickers, getCurrentWeight } from '../lib/binance.js';
+import { getTopSymbolsByVolume, getMultipleKlines, getAllTickers, getCurrentWeight, getFundingRates } from '../lib/binance.js';
 import { SignalScoringEngine } from '../signal-engine/SignalScoringEngine.js';
 import { validateSignal } from '../lib/gemini.js';
 import { sendAlert } from '../lib/telegram.js';
@@ -84,7 +84,13 @@ export async function runFullScan(io) {
       }
     }
 
-    const rawResults = engine.scoreMultiple(symbols, candleMap);
+    // Fetch funding rates for all symbols (single bulk call, 5min cached)
+    const fundingRates = await getFundingRates().catch(err => {
+      console.warn('[Scanner] Funding rates unavailable:', err.message);
+      return null;
+    });
+
+    const rawResults = engine.scoreMultiple(symbols, candleMap, fundingRates);
 
     logScanStep(io, `[Debug] Raw scored results count: ${rawResults.length}`);
     logScanStep(io, `[Debug] Null results (filtered by ADX trend threshold or missing data): ${symbols.length - rawResults.length}`);

@@ -115,9 +115,10 @@ export class SignalScoringEngine {
    * @param {Array} candles15m 
    * @param {Array} candles1h 
    * @param {Array|null} candles4h 
+   * @param {Object|null} fundingData Optional premiumIndex data mapping for symbol
    * @returns {Object|null} SignalResult or null if insufficient data / ranging market / counter-trend.
    */
-  scoreSymbol(symbol, candles15m, candles1h, candles4h = null) {
+  scoreSymbol(symbol, candles15m, candles1h, candles4h = null, fundingData = null) {
     if (!candles15m || candles15m.length < 200 || !candles1h || candles1h.length < 200) {
       return null;
     }
@@ -191,6 +192,49 @@ export class SignalScoringEngine {
       return null; // Counter-trend to 4h — no edge
     }
 
+    // ── Funding Rate Filter ──────────────────────────────────────────────
+    // Funding rate is free directional edge:
+    //   High positive funding → longs pay shorts → SHORT has cost-of-carry advantage
+    //   High negative funding → shorts pay longs → LONG has cost-of-carry advantage
+    //   Extreme funding in SAME direction as signal = strong confluence bonus
+    //   Extreme funding AGAINST signal = score penalty (fighting the carry)
+
+    let fundingScore = 0;
+    let fundingReason = null;
+
+    if (fundingData) {
+      const rate = fundingData.rate; // raw 8h rate
+
+      const EXTREME_THRESHOLD  = 0.001;  // 0.1% per 8h = ~109% annualized
+      const HIGH_THRESHOLD     = 0.0004; // 0.04% per 8h = ~43% annualized
+      const NEGATIVE_EXTREME   = -0.001;
+      const NEGATIVE_HIGH      = -0.0004;
+
+      if (direction === 'SHORT') {
+        if (rate >= EXTREME_THRESHOLD) {
+          fundingScore = 25; // Longs paying heavily — shorts get paid to hold
+          fundingReason = `Extreme positive funding (${(rate * 100).toFixed(4)}%) favors SHORT`;
+        } else if (rate >= HIGH_THRESHOLD) {
+          fundingScore = 12;
+          fundingReason = `High positive funding (${(rate * 100).toFixed(4)}%) favors SHORT`;
+        } else if (rate <= NEGATIVE_HIGH) {
+          fundingScore = -15; // Funding working against SHORT
+          fundingReason = `Negative funding penalizes SHORT position`;
+        }
+      } else if (direction === 'LONG') {
+        if (rate <= NEGATIVE_EXTREME) {
+          fundingScore = 25; // Shorts paying heavily — longs get paid to hold
+          fundingReason = `Extreme negative funding (${(rate * 100).toFixed(4)}%) favors LONG`;
+        } else if (rate <= NEGATIVE_HIGH) {
+          fundingScore = 12;
+          fundingReason = `Negative funding (${(rate * 100).toFixed(4)}%) favors LONG`;
+        } else if (rate >= HIGH_THRESHOLD) {
+          fundingScore = -15; // Funding working against LONG
+          fundingReason = `Positive funding penalizes LONG position`;
+        }
+      }
+    }
+
     // ── Decorrelated Score Calculation ───────────────────────────────────
     // Only count sub-scores that align with the majority direction
     const alignedScores = {
@@ -203,14 +247,18 @@ export class SignalScoringEngine {
 
     const totalScore = computeDecorrelatedScore(alignedScores, this.config.weights);
 
+    // Apply funding adjustment directly to final score (not weighted — it's an additive edge)
+    const fundingAdjustedScore = Math.min(100, Math.max(0, totalScore + fundingScore));
+    const finalScore = fundingAdjustedScore;
+
     // ── Confidence Label ─────────────────────────────────────────────────
     let confidence = 'LOW';
-    if (totalScore >= this.config.thresholds.veryHighConfidence) confidence = 'VERY_HIGH';
-    else if (totalScore >= this.config.thresholds.highConfidence) confidence = 'HIGH';
-    else if (totalScore >= this.config.thresholds.minScore) confidence = 'MEDIUM';
+    if (finalScore >= this.config.thresholds.veryHighConfidence) confidence = 'VERY_HIGH';
+    else if (finalScore >= this.config.thresholds.highConfidence) confidence = 'HIGH';
+    else if (finalScore >= this.config.thresholds.minScore) confidence = 'MEDIUM';
 
     // ── Dynamic ATR-Based TP/SL ──────────────────────────────────────────
-    const { stopLoss, tp1, tp2 } = this._calculateDynamicTargets(
+    const { stopLoss, tp1, tp2, atr: finalAtr, positionSizing, tp1IsNetPositive } = this._calculateDynamicTargets(
       candles15m, direction, currentPrice
     );
     
@@ -219,14 +267,15 @@ export class SignalScoringEngine {
     // ── Compile Reasons ──────────────────────────────────────────────────
     const allReasons = [
       ...trend.reasons, ...momentum.reasons, ...volume.reasons, 
-      ...structure.reasons, ...patternScore.reasons
+      ...structure.reasons, ...patternScore.reasons,
+      ...(fundingReason ? [fundingReason] : [])
     ];
     
     return {
       symbol,
       direction,
       htfBias,  // 'LONG' | 'SHORT' | 'NEUTRAL'
-      score: totalScore,
+      score: finalScore,
       confidence,
       subScores: { trend, momentum, volume, structure, pattern: patternScore },
       entry: currentPrice,
@@ -238,16 +287,21 @@ export class SignalScoringEngine {
       regime,
       volumeZScore: parseFloat(volZ.toFixed(2)),
       geminiVerdict: null,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      fundingRate: fundingData ? parseFloat((fundingData.rate * 100).toFixed(6)) : null,
+      fundingBias: fundingScore > 0 ? 'CONFIRMS' : fundingScore < 0 ? 'OPPOSES' : 'NEUTRAL',
+      positionSizing,
+      tp1IsNetPositive
     };
   }
 
-  scoreMultiple(symbols, candleMap) {
+  scoreMultiple(symbols, candleMap, fundingRates = null) {
     const results = [];
     for (const symbol of symbols) {
       const c = candleMap.get(symbol);
       if (c && c['15m'] && c['1h']) {
-        const res = this.scoreSymbol(symbol, c['15m'], c['1h'], c['4h'] || null);
+        const funding = fundingRates ? fundingRates.get(symbol) || null : null;
+        const res = this.scoreSymbol(symbol, c['15m'], c['1h'], c['4h'] || null, funding);
         if (res) results.push(res);
       }
     }
@@ -294,7 +348,46 @@ export class SignalScoringEngine {
       ? entry + (atr * tp2Mul)
       : entry - (atr * tp2Mul);
 
-    return { stopLoss, tp1, tp2, atr };
+    // ── Fee-Adjusted Break-Even Validation ──────────────────────────────
+    // Binance taker fee = 0.05% each side = 0.10% round-trip
+    // TP1 must exceed fee cost to be a net-positive trade
+    const TAKER_FEE = 0.0005; // 0.05% per side
+    const roundTripFeePct = TAKER_FEE * 2;
+    const breakEvenMovePct = roundTripFeePct; // minimum move needed to profit
+
+    const tp1Pct = Math.abs(tp1 - entry) / entry;
+    const tp1IsNetPositive = tp1Pct > breakEvenMovePct;
+
+    // ── Position Sizing (capital-aware, risk-normalized) ─────────────────
+    // Default assumptions — these get overridden if settings expose them later
+    const CAPITAL = 1000;          // base capital in USDT
+    const RISK_PCT = 0.02;         // risk 2% of capital per trade
+    const LEVERAGE = 5;            // default 5x leverage
+
+    const riskAmount = CAPITAL * RISK_PCT;                    // $20
+    const slDistPct = Math.abs(entry - stopLoss) / entry;     // e.g. 0.018 = 1.8%
+    const positionUsd = Math.min(riskAmount / slDistPct, CAPITAL * LEVERAGE);
+    const positionQty = positionUsd / entry;
+    const feeUsd = positionUsd * roundTripFeePct;
+    const potentialProfitTp1 = (positionUsd * Math.abs(tp1 - entry) / entry) - feeUsd;
+    const potentialProfitTp2 = (positionUsd * Math.abs(tp2 - entry) / entry) - feeUsd;
+    const potentialLoss = riskAmount + feeUsd;
+
+    return {
+      stopLoss, tp1, tp2, atr,
+      tp1IsNetPositive,
+      positionSizing: {
+        positionUsd: parseFloat(positionUsd.toFixed(2)),
+        positionQty: parseFloat(positionQty.toFixed(4)),
+        riskUsd: parseFloat(riskAmount.toFixed(2)),
+        feeUsd: parseFloat(feeUsd.toFixed(3)),
+        potentialProfitTp1: parseFloat(potentialProfitTp1.toFixed(2)),
+        potentialProfitTp2: parseFloat(potentialProfitTp2.toFixed(2)),
+        potentialLoss: parseFloat(potentialLoss.toFixed(2)),
+        riskRewardTp1: parseFloat((potentialProfitTp1 / potentialLoss).toFixed(2)),
+        riskRewardTp2: parseFloat((potentialProfitTp2 / potentialLoss).toFixed(2))
+      }
+    };
   }
 
   // ── Sub-Score Evaluators ──────────────────────────────────────────────
