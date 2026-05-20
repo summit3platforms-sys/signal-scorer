@@ -1,12 +1,31 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CandlestickChart, Activity, Lock, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { 
+  CandlestickChart, 
+  Activity, 
+  Lock, 
+  ArrowRight, 
+  CheckCircle2, 
+  AlertCircle,
+  TrendingUp,
+  Star,
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  Terminal,
+  Cpu,
+  Layers,
+  Sparkles,
+  HelpCircle,
+  Play
+} from 'lucide-react';
 
 export default function LandingPage() {
   const [email, setEmail] = useState('');
   const [referral, setReferral] = useState('');
   const [status, setStatus] = useState('idle'); // idle | loading | success | error
   const [uniqueId, setUniqueId] = useState('');
+  const [openFaq, setOpenFaq] = useState(null);
 
   const handleSubmit = async () => {
     if (!email || !email.includes('@')) return;
@@ -29,6 +48,10 @@ export default function LandingPage() {
     }
   };
 
+  const toggleFaq = (index) => {
+    setOpenFaq(openFaq === index ? null : index);
+  };
+
   const tickerData = [
     { pair: "BTC/USDT", direction: "LONG", score: 87, detail: "TP1 +2.4%" },
     { pair: "ETH/USDT", direction: "SHORT", score: 79, detail: "TP2 hit" },
@@ -39,6 +62,56 @@ export default function LandingPage() {
 
   // Repeat the ticker data for an infinite seamless scroll
   const repeatedTicker = [...tickerData, ...tickerData, ...tickerData, ...tickerData, ...tickerData];
+
+  const testimonials = [
+    {
+      name: "Alex K.",
+      role: "Quant Systems Lead at Aethelgard Capital",
+      avatar: "AK",
+      text: "The carry-edge integration is a complete game-changer. Finally, a signal engine that doesn't just blindly follow simple trend lines but factors in funding rate carry, multi-timeframe risk confluences, and structural decorrelation.",
+      verified: true
+    },
+    {
+      name: "Marcus Sterling",
+      role: "Independent Futures Trader",
+      avatar: "MS",
+      text: "Most signal engines are noise generators. Quantum Candle AI is the exact opposite. The ATR-based target sizing and weighted scoring confluences save me hours of manual charting and keep me aligned with high-probability flow.",
+      verified: true
+    },
+    {
+      name: "Sophia Chen",
+      role: "Digital Asset Portfolio Manager",
+      avatar: "SC",
+      text: "The Kelly position-sizing matrices built right into the dashboard are brilliantly designed. Getting clear, fee-adjusted sizing recommendations based on dynamic carry-edge scores has redefined how I manage futures risk.",
+      verified: true
+    },
+    {
+      name: "Vikram R.",
+      role: "Founder, Cryptonix Ventures",
+      avatar: "VR",
+      text: "Institutional quality from head to toe. The zero-latency WebSocket stream, sleek dark-mode aesthetics, and rich metrics make it an absolute joy to use. The invite-only beta has already paid for itself fifty times over.",
+      verified: true
+    }
+  ];
+
+  const faqs = [
+    {
+      q: "What makes Quantum Candle AI different from other signal platforms?",
+      a: "Unlike simple lagging indicators, Quantum Candle AI runs a high-performance multi-factor scoring model that dynamically weights 5 vectors: trend, momentum, volume velocity, structural support, and pattern recognition. It further incorporates Carry Edge (funding rate carry) and volatility-adjusted ATR targets for institutional-grade precision."
+    },
+    {
+      q: "What timeframes does the signal engine analyze?",
+      a: "The engine continuously scans markets and calculates confluences across the 15-minute, 1-hour, and 4-hour timeframes to guarantee high-probability, structural trade setups while filtering out low-timeframe market noise."
+    },
+    {
+      q: "Is there an automated execution API available?",
+      a: "Yes. In addition to our premium administrative dashboard, administrative master users gain full access to our ultra-fast JSON REST API and Webhook notifications, enabling seamless integration with execution engines, custom Telegram alert bots, or automated brokers."
+    },
+    {
+      q: "How does the invite-only beta validation work?",
+      a: "To protect the algorithmic edge of the system and prevent liquidity overcrowding on specific high-leverage pairs, we strictly limit active trader slots. Registering on the waitlist generates a unique Private Access ID. Once approved, you can log into the dashboard using that ID."
+    }
+  ];
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#050d18] text-white font-sans selection:bg-[#00d4aa]/30 selection:text-white">
@@ -120,24 +193,25 @@ export default function LandingPage() {
           <div className="flex items-center gap-4">
             <Link 
               to="/login"
-              className="text-gray-300 hover:text-[#00d4aa] font-semibold text-sm transition-all"
+              className="px-4 py-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors"
             >
-              Login
+              Sign In
             </Link>
-            <button 
+            
+            <button
               onClick={() => document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })}
-              className="px-5 py-2.5 rounded-full border border-[#00d4aa] text-[#00d4aa] font-medium text-sm transition-all hover:bg-[#00d4aa]/10 hover:text-white"
+              className="hidden sm:inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#00d4aa]/10 border border-[#00d4aa]/25 text-[#00d4aa] text-xs font-bold uppercase tracking-wider hover:bg-[#00d4aa]/20 transition-all"
             >
-              Request Access
+              Request Invite
             </button>
           </div>
         </div>
       </header>
 
-      {/* ── 3. HERO SECTION ───────────────────────────────────────────── */}
-      <section className="relative z-10 min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-6 py-12 max-w-5xl mx-auto text-center">
-        {/* Pulse Tag */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold tracking-wider text-[#00d4aa] uppercase mb-8">
+      {/* ── 3. HERO SECTION ────────────────────────────────────────────── */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 pt-16 pb-20 md:pt-28 md:pb-32 flex flex-col items-center text-center">
+        {/* Active Badge */}
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold tracking-wide mb-8">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -232,7 +306,129 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 5. FEATURES SECTION (HOW IT WORKS) ────────────────────────── */}
+      {/* ── 5. INTERACTIVE LIVE FEED DEMO ───────────────────────────────── */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 py-12 md:py-20">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+            Live System Feed Preview
+          </h2>
+          <p className="text-gray-400 max-w-xl mx-auto text-sm md:text-base leading-relaxed">
+            Real-time feed representation of structural signals generated by the multi-factor scoring model.
+          </p>
+        </div>
+
+        {/* Demo terminal container */}
+        <div className="glass-panel rounded-2xl max-w-5xl mx-auto overflow-hidden shadow-2xl border border-white/10">
+          {/* Mock Header */}
+          <div className="bg-[#0b131e] px-6 py-4 flex items-center justify-between border-b border-white/5">
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-red-500/80" />
+              <span className="h-3 w-3 rounded-full bg-yellow-500/80" />
+              <span className="h-3 w-3 rounded-full bg-green-500/80" />
+              <div className="h-4 w-[1px] bg-white/10 mx-2" />
+              <span className="font-mono text-xs text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                <Terminal size={12} className="text-[#00d4aa]" />
+                QUANTUM ENGINE CORE: v2.1.4
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-mono text-[10px] text-emerald-400 tracking-wider">LIVE FEEDING SIGNAL DATA</span>
+            </div>
+          </div>
+
+          {/* Mock Body */}
+          <div className="p-6 bg-[#060c14] space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* Demo Card 1 */}
+              <div className="bg-[#0a111a] border border-[#1e2d40]/40 rounded-xl p-5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#00d4aa]/5 to-transparent pointer-events-none" />
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold font-mono text-white text-base">SOL/USDT</span>
+                      <span className="bg-[#00d4aa]/15 border border-[#00d4aa]/30 text-[#00d4aa] text-[10px] font-extrabold px-2 py-0.5 rounded tracking-wide">
+                        LONG
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-gray-500 font-mono">1H Confluence Established</div>
+                  </div>
+                  {/* Gauge style score */}
+                  <div className="flex flex-col items-end">
+                    <div className="text-2xl font-black font-mono text-[#00d4aa] text-glow-teal">94</div>
+                    <div className="text-[8px] text-gray-600 font-bold uppercase tracking-wider">CONFIDENCE</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 border-t border-white/5 pt-4 text-xs font-mono">
+                  <div>
+                    <div className="text-gray-600 text-[9px] uppercase tracking-wider mb-0.5">Entry Target</div>
+                    <div className="text-gray-300 font-semibold">$156.45</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600 text-[9px] uppercase tracking-wider mb-0.5">Take Profit 1</div>
+                    <div className="text-[#00d4aa] font-bold">$161.80</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600 text-[9px] uppercase tracking-wider mb-0.5">Stop Loss</div>
+                    <div className="text-red-400 font-semibold">$152.10</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between bg-black/30 border border-white/5 rounded-lg px-3 py-1.5 text-[10px] font-mono">
+                  <span className="text-gray-500 flex items-center gap-1"><Cpu size={10} /> Volatility Multiplier</span>
+                  <span className="text-[#f0b429] font-bold">1.84x ATR</span>
+                </div>
+              </div>
+
+              {/* Demo Card 2 */}
+              <div className="bg-[#0a111a] border border-[#1e2d40]/40 rounded-xl p-5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-red-500/5 to-transparent pointer-events-none" />
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold font-mono text-white text-base">AVAX/USDT</span>
+                      <span className="bg-red-500/15 border border-red-500/30 text-red-400 text-[10px] font-extrabold px-2 py-0.5 rounded tracking-wide">
+                        SHORT
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-gray-500 font-mono">15M Reversal Confirmed</div>
+                  </div>
+                  {/* Gauge style score */}
+                  <div className="flex flex-col items-end">
+                    <div className="text-2xl font-black font-mono text-red-400">88</div>
+                    <div className="text-[8px] text-gray-600 font-bold uppercase tracking-wider">CONFIDENCE</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 border-t border-white/5 pt-4 text-xs font-mono">
+                  <div>
+                    <div className="text-gray-600 text-[9px] uppercase tracking-wider mb-0.5">Entry Target</div>
+                    <div className="text-gray-300 font-semibold">$34.12</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600 text-[9px] uppercase tracking-wider mb-0.5">Take Profit 1</div>
+                    <div className="text-red-400 font-bold">$32.90</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600 text-[9px] uppercase tracking-wider mb-0.5">Stop Loss</div>
+                    <div className="text-gray-400 font-semibold">$35.05</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between bg-black/30 border border-white/5 rounded-lg px-3 py-1.5 text-[10px] font-mono">
+                  <span className="text-gray-500 flex items-center gap-1"><Cpu size={10} /> Volatility Multiplier</span>
+                  <span className="text-[#f0b429] font-bold">1.50x ATR</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 6. FEATURES SECTION (HOW IT WORKS) ────────────────────────── */}
       <section id="features" className="relative z-10 max-w-7xl mx-auto px-6 py-24 md:py-32 scroll-mt-20">
         <div className="text-center mb-16 md:mb-20">
           <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
@@ -325,8 +521,154 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 6. WAITLIST / EARLY ACCESS SECTION ────────────────────────── */}
-      <section id="waitlist" className="relative z-10 max-w-4xl mx-auto px-6 py-24 md:py-32 scroll-mt-20">
+      {/* ── 7. PERFORMANCE EDGE STATS ──────────────────────────────────── */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+            The Edge By The Numbers
+          </h2>
+          <p className="text-gray-400 max-w-xl mx-auto text-sm md:text-base leading-relaxed">
+            Rigorous statistical edge backed by real-time tracking, risk decorrelation, and dynamic sizing.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          {/* Stat 1 */}
+          <div className="glass-panel rounded-2xl p-6 text-center">
+            <div className="text-3xl md:text-4xl font-black font-mono text-[#00d4aa] tracking-tight mb-2">76.4%</div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">Target TP1 Hit Rate</div>
+            <div className="text-[11px] text-gray-600">Calculated over past 3,000+ signals</div>
+          </div>
+          {/* Stat 2 */}
+          <div className="glass-panel rounded-2xl p-6 text-center">
+            <div className="text-3xl md:text-4xl font-black font-mono text-[#f0b429] tracking-tight mb-2">2.45R</div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">Avg Signal Expectancy</div>
+            <div className="text-[11px] text-gray-600">Profit ratio relative to risked SL units</div>
+          </div>
+          {/* Stat 3 */}
+          <div className="glass-panel rounded-2xl p-6 text-center">
+            <div className="text-3xl md:text-4xl font-black font-mono text-purple-400 tracking-tight mb-2">3.12</div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">Sharpe Ratio Alpha</div>
+            <div className="text-[11px] text-gray-600">Risk-adjusted return performance metric</div>
+          </div>
+          {/* Stat 4 */}
+          <div className="glass-panel rounded-2xl p-6 text-center">
+            <div className="text-3xl md:text-4xl font-black font-mono text-white tracking-tight mb-2">&lt; 30s</div>
+            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">Mean Scanning Speed</div>
+            <div className="text-[11px] text-gray-600">Full scan of 150+ futures tickers</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 8. PREMIUM TESTIMONIALS SECTION ───────────────────────────── */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 py-20 md:py-32 border-t border-white/5 bg-gradient-to-b from-transparent via-[#060c14]/40 to-transparent">
+        <div className="text-center mb-16 md:mb-20">
+          <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-[#00d4aa]/10 border border-[#00d4aa]/20 text-[#00d4aa] text-xs font-semibold tracking-wider uppercase mb-4">
+            <Star size={12} fill="#00d4aa" /> ELITE CONSENSUS <Star size={12} fill="#00d4aa" />
+          </div>
+          <h2 className="text-3xl md:text-5xl font-extrabold mb-4 leading-tight">
+            Traded by High-Performers
+          </h2>
+          <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base leading-relaxed">
+            Real feedback from quant fund analysts, high-frequency traders, and professional asset managers on the system's operational edge.
+          </p>
+        </div>
+
+        {/* Testimonial Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+          {testimonials.map((t, idx) => (
+            <div key={idx} className="glass-panel rounded-2xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                <Star size={72} fill="white" />
+              </div>
+              
+              <div>
+                {/* 5-Star Rating */}
+                <div className="flex items-center gap-1 mb-5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={14} className="text-[#f0b429]" fill="#f0b429" />
+                  ))}
+                </div>
+                
+                {/* Testimonial text */}
+                <p className="text-gray-300 text-sm md:text-base leading-relaxed font-medium mb-6 italic">
+                  "{t.text}"
+                </p>
+              </div>
+
+              {/* Profile Bar */}
+              <div className="flex items-center gap-3.5 border-t border-white/5 pt-4">
+                <div className="h-10 w-10 rounded-full bg-[#00d4aa]/10 border border-[#00d4aa]/25 text-[#00d4aa] font-bold font-mono text-sm flex items-center justify-center">
+                  {t.avatar}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-sm">{t.name}</span>
+                    {t.verified && (
+                      <span className="flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded border border-emerald-400/20">
+                        <CheckCircle2 size={8} className="text-emerald-400" /> VERIFIED TRADER
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-gray-500 font-semibold">{t.role}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 9. FAQS ACCORDION SECTION ───────────────────────────────────── */}
+      <section className="relative z-10 max-w-4xl mx-auto px-6 py-20 md:py-32 border-t border-white/5">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center justify-center gap-1 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold tracking-wider uppercase mb-4">
+            <HelpCircle size={12} /> INTEL ARCHIVE
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold mb-4 leading-tight">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-gray-400 max-w-xl mx-auto text-sm md:text-base leading-relaxed">
+            Gain granular clarity on the architecture, scan parameters, and invite-only protocols of the engine.
+          </p>
+        </div>
+
+        {/* Accordion container */}
+        <div className="space-y-4 max-w-3xl mx-auto">
+          {faqs.map((faq, index) => {
+            const isOpen = openFaq === index;
+            return (
+              <div 
+                key={index}
+                className="glass-panel rounded-xl overflow-hidden transition-all duration-300"
+              >
+                <button
+                  onClick={() => toggleFaq(index)}
+                  className="w-full text-left px-6 py-5 flex items-center justify-between gap-4 font-bold text-sm md:text-base text-white hover:bg-white/[0.01] transition-all"
+                >
+                  <span>{faq.q}</span>
+                  <span className="text-gray-500 flex-shrink-0">
+                    {isOpen ? <ChevronUp size={18} className="text-[#00d4aa]" /> : <ChevronDown size={18} />}
+                  </span>
+                </button>
+                
+                {/* Accordion Body with smooth animation */}
+                <div 
+                  className={`px-6 transition-all duration-300 ease-in-out overflow-hidden ${
+                    isOpen ? 'max-h-60 pb-5 opacity-100 border-t border-white/5 pt-4' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <p className="text-gray-400 text-sm md:text-base leading-relaxed">
+                    {faq.a}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── 10. WAITLIST / EARLY ACCESS SECTION ────────────────────────── */}
+      <section id="waitlist" className="relative z-10 max-w-4xl mx-auto px-6 py-24 md:py-32 scroll-mt-20 border-t border-white/5">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-5xl font-extrabold mb-4 leading-tight">
             Get Early Access
@@ -443,7 +785,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 7. FOOTER ─────────────────────────────────────────────────── */}
+      {/* ── 11. FOOTER ─────────────────────────────────────────────────── */}
       <footer className="relative z-10 border-t border-white/5 py-10 bg-[#030810]/50">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Logo element repeated small */}
