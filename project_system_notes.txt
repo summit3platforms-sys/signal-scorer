@@ -1,6 +1,6 @@
 ==================================================
 PROJECT: Signal Scorer Pro
-LAST UPDATED: 2026-05-20 13:45:00 IST
+LAST UPDATED: 2026-05-20 13:50:00 IST
 ==================================================
 
 CURRENT TECH STACK
@@ -252,6 +252,7 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 32. UPGRADED FRONTEND SIGNAL BADGES: Redesigned and integrated premium gold "TP1 ✓" badges on Signal Cards to clearly indicate when partial exits and breakeven SL transitions have occurred.
 33. TOTAL ACTIVE SIGNALS COMPONENT: Integrated a dedicated "Active Signals" card inside the dashboard stats grid showcasing currently open/unresolved signals count, and added a real-time glowing pill count badge next to the tab header.
 34. PERSISTENT RISK-REWARD CALCULATION CORRECTION: Resolved a database schema mismatch where the riskReward property was not persisted inside the signals SQLite table. Computed riskReward dynamically on the fly during active DB signals retrieval in cache.js and implemented a zero-latency client-side calculation fallback inside SignalCard.jsx to eliminate visual "x" (undefined) renders.
+35. INSTITUTIONAL-GRADE PAGINATION FOR TRADE HISTORY: Overhauled HistoryTable.jsx to restrict historical trade rendering to 10 entries per page. Implemented interactive dynamic pagination controls complete with page numeric selections (e.g. 1, 2, 3), custom ellipsis ranges for large page sets, responsive Chevron next/prev toggles, and detailed index tracker summaries.
 ==================================================
 TODO FEATURES
 --------------------------------------------------
