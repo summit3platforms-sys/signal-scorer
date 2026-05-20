@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, Zap, HelpCircle, Activity, History, FileText, Settings, Stethoscope, AlertOctagon } from 'lucide-react';
+import { RefreshCw, Zap, HelpCircle, Activity, History, FileText, Settings, Stethoscope, AlertOctagon, Users } from 'lucide-react';
 import { useSignalStore } from '../store/signalStore.js';
 import StatsBar from '../components/StatsBar.jsx';
 import FilterBar from '../components/FilterBar.jsx';
@@ -11,6 +11,7 @@ import HistoryTable from '../components/HistoryTable.jsx';
 import SettingsTab from '../components/SettingsTab.jsx';
 import HealthTab from '../components/HealthTab.jsx';
 import ErrorLogsTab from '../components/ErrorLogsTab.jsx';
+import WaitlistTab from '../components/WaitlistTab.jsx';
 
 function formatLastScan(isoStr) {
   if (!isoStr) return 'Never';
@@ -166,6 +167,14 @@ export default function Dashboard() {
           >
             <AlertOctagon size={16} /> Error Logs
           </button>
+          <button
+            onClick={() => setActiveTab('WAITLIST')}
+            className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === 'WAITLIST' ? 'border-[#00d4aa] text-[#00d4aa]' : 'border-transparent text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <Users size={16} /> Waitlist
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -209,6 +218,8 @@ export default function Dashboard() {
           <HealthTab />
         ) : activeTab === 'ERRORS' ? (
           <ErrorLogsTab />
+        ) : activeTab === 'WAITLIST' ? (
+          <WaitlistTab />
         ) : (
           <div className="bg-[#0f1923] border border-[#1e2d40] rounded-xl p-6 animate-fadeSlide">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
