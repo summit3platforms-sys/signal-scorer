@@ -12,10 +12,10 @@ export default function Header({ meta, onRescan }) {
   return (
     <header className="header">
       <div className="header-brand">
-        <div className="header-logo">S</div>
+        <div className="header-logo">QC</div>
         <div>
-          <div className="header-title">Signal Scorer</div>
-          <div className="header-subtitle">BINANCE USDT FUTURES INTELLIGENCE</div>
+          <div className="header-title">Quantum Candle AI</div>
+          <div className="header-subtitle">NEXT-GENERATION CRYPTO SIGNAL ENGINE</div>
         </div>
       </div>
 

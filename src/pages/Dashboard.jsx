@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   RefreshCw, 
-  Zap, 
+  CandlestickChart, 
   HelpCircle, 
   Activity, 
   History, 
@@ -85,14 +85,14 @@ export default function Dashboard() {
           <div className="flex items-center gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-2">
-                <Zap className="text-[#00d4aa]" size={22} />
-                <span className="text-lg font-bold text-white tracking-tight">Signal Scorer <span className="text-[#00d4aa]">Pro</span></span>
+                <CandlestickChart className="text-[#00d4aa]" size={22} />
+                <span className="text-lg font-bold text-white tracking-tight">Quantum Candle <span className="text-[#00d4aa]">AI</span></span>
               </div>
-              <div className="text-[10px] text-gray-600 tracking-widest uppercase mt-0.5">Binance USDT Futures Intelligence</div>
+              <div className="text-[10px] text-gray-600 tracking-widest uppercase mt-0.5">Next-Generation Crypto Signal Engine</div>
             </div>
 
             {user && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-white/[0.03] border border-white/5 rounded-full text-xs">
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/[0.03] border border-[#1e2d40]/40 rounded-full text-xs">
                 <span className="font-mono text-gray-500 font-medium">Account:</span>
                 <span className="font-mono font-bold text-[#f0b429]">{user.uniqueId}</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-[#00d4aa]" />
