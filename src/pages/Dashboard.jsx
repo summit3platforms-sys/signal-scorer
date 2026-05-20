@@ -106,7 +106,7 @@ export default function Dashboard() {
 
       <main className="max-w-screen-2xl mx-auto px-6 py-6 space-y-6">
         {/* Stats Bar */}
-        <StatsBar stats={stats} totalPairs={scanStatus.totalPairs} />
+        <StatsBar stats={stats} totalPairs={scanStatus.totalPairs} activeCount={signals.length} />
 
         {/* Live Ticker */}
         <LiveTicker signals={signals} prices={prices} />
@@ -120,6 +120,11 @@ export default function Dashboard() {
             }`}
           >
             <Activity size={16} /> Active Signals
+            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs font-mono font-bold transition-colors ${
+              activeTab === 'ACTIVE' ? 'bg-[#00d4aa]/15 text-[#00d4aa] border border-[#00d4aa]/30' : 'bg-gray-800 text-gray-400 border border-gray-700/50'
+            }`}>
+              {signals.length}
+            </span>
           </button>
           <button
             onClick={() => setActiveTab('HISTORY')}

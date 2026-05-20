@@ -1,6 +1,6 @@
 ==================================================
 PROJECT: Signal Scorer Pro
-LAST UPDATED: 2026-05-19 22:45:00 IST
+LAST UPDATED: 2026-05-20 13:35:00 IST
 ==================================================
 
 CURRENT TECH STACK
@@ -250,6 +250,7 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 30. TELEGRAM ALERT PERCENTAGE MARKERS: Upgraded Telegram signal notifications to dynamically calculate and append percentage gains/losses for Entry, Take Profit 1, Take Profit 2, and Stop Loss targets.
 31. SCAN DURATION IN CACHE & HEADER: Exposed scanDurationMs on signal metadata and mapped it through to the Zustand store, enabling the header to display "took Xs" metrics next to the scan time.
 32. UPGRADED FRONTEND SIGNAL BADGES: Redesigned and integrated premium gold "TP1 ✓" badges on Signal Cards to clearly indicate when partial exits and breakeven SL transitions have occurred.
+33. TOTAL ACTIVE SIGNALS COMPONENT: Integrated a dedicated "Active Signals" card inside the dashboard stats grid showcasing currently open/unresolved signals count, and added a real-time glowing pill count badge next to the tab header.
 ==================================================
 TODO FEATURES
 --------------------------------------------------

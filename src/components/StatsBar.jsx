@@ -1,4 +1,4 @@
-import { TrendingUp, Target, Rocket, Shield } from 'lucide-react';
+import { TrendingUp, Target, Rocket, Shield, Activity } from 'lucide-react';
 
 function StatCard({ label, value, sub, color, Icon }) {
   const colorMap = {
@@ -21,12 +21,13 @@ function StatCard({ label, value, sub, color, Icon }) {
   );
 }
 
-export default function StatsBar({ stats, totalPairs }) {
+export default function StatsBar({ stats, totalPairs, activeCount }) {
   const expVal = stats?.expectancy ?? 0;
   const expectancyStr = expVal > 0 ? `+${expVal}%` : `${expVal}%`;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-3">
+      <StatCard label="Active Signals" value={activeCount ?? 0} sub="Currently open" color="green" Icon={Activity} />
       <StatCard label="Total Signals" value={stats?.totalSignals ?? 0} sub={`of ${totalPairs ?? '—'} pairs`} color="blue" Icon={TrendingUp} />
       <StatCard label="Overall Accuracy" value={`${stats?.accuracy ?? 0}%`} sub="Weighted Win Rate" color="blue" Icon={Target} />
       <StatCard label="TP1 Hit Rate" value={`${stats?.tp1TouchRate ?? 0}%`} sub="hit rate TP1" color="green" Icon={Target} />
