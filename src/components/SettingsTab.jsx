@@ -16,7 +16,10 @@ export default function SettingsTab() {
     cooldownMinutes: 30,
     atrStopLoss: 2.0,
     atrTakeProfit1: 2.5,
-    atrTakeProfit2: 4.5
+    atrTakeProfit2: 4.5,
+    capital: 1000,
+    riskPct: 2,
+    leverage: 5
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -217,6 +220,48 @@ export default function SettingsTab() {
             <p className="text-xs text-gray-500 mt-2">
               Distance to final Take Profit Target 2 (closes signal completely).
             </p>
+          </div>
+
+          {/* ── Position Sizing Settings ──────────────────────────────── */}
+          <h3 className="text-lg font-bold text-gray-300 border-b border-[#1e2d40] pb-2 mt-4">Position Sizing</h3>
+
+          {/* Capital */}
+          <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+            <div className="flex justify-between mb-2">
+              <label className="text-sm font-medium text-gray-300">Capital (USDT)</label>
+              <span className="text-sm font-bold text-[#00d4aa]">${localSettings.capital ?? 1000}</span>
+            </div>
+            <input type="range" min="100" max="100000" step="100"
+              value={localSettings.capital ?? 1000}
+              onChange={(e) => handleChange('capital', e.target.value)}
+              className="w-full accent-[#00d4aa]" />
+            <p className="text-xs text-gray-500 mt-2">Your total trading capital in USDT. Used to calculate position sizes.</p>
+          </div>
+
+          {/* Risk per trade */}
+          <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+            <div className="flex justify-between mb-2">
+              <label className="text-sm font-medium text-gray-300">Risk Per Trade</label>
+              <span className="text-sm font-bold text-[#00d4aa]">{localSettings.riskPct ?? 2}%</span>
+            </div>
+            <input type="range" min="0.5" max="10" step="0.5"
+              value={localSettings.riskPct ?? 2}
+              onChange={(e) => handleChange('riskPct', e.target.value)}
+              className="w-full accent-[#00d4aa]" />
+            <p className="text-xs text-gray-500 mt-2">Percentage of capital risked per signal. 1-2% is institutional standard.</p>
+          </div>
+
+          {/* Leverage */}
+          <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+            <div className="flex justify-between mb-2">
+              <label className="text-sm font-medium text-gray-300">Leverage</label>
+              <span className="text-sm font-bold text-[#00d4aa]">{localSettings.leverage ?? 5}×</span>
+            </div>
+            <input type="range" min="1" max="20" step="1"
+              value={localSettings.leverage ?? 5}
+              onChange={(e) => handleChange('leverage', e.target.value)}
+              className="w-full accent-[#00d4aa]" />
+            <p className="text-xs text-gray-500 mt-2">Leverage multiplier. Higher leverage = larger position but higher liquidation risk.</p>
           </div>
         </div>
       </div>

@@ -92,7 +92,10 @@ export function initDB() {
     cooldownMinutes: '30',
     atrStopLoss: '2.0',
     atrTakeProfit1: '2.5',
-    atrTakeProfit2: '4.5'
+    atrTakeProfit2: '4.5',
+    capital: '1000',
+    riskPct: '2',
+    leverage: '5'
   };
 
   const insert = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
@@ -405,7 +408,10 @@ export function purgeAllData() {
       cooldownMinutes: '30',
       atrStopLoss: '2.0',
       atrTakeProfit1: '2.5',
-      atrTakeProfit2: '4.5'
+      atrTakeProfit2: '4.5',
+    capital: '1000',
+    riskPct: '2',
+    leverage: '5'
     };
     const insert = conn.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
     for (const [k, v] of Object.entries(seedSettings)) insert.run(k, v);

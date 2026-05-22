@@ -1,7 +1,11 @@
 import express from 'express';
 import { broadcastMessage, sendAlert } from '../../lib/telegram.js';
+import { requireMaster } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// All telegram routes require master admin access
+router.use(requireMaster);
 
 router.post('/broadcast', async (req, res) => {
   const { message } = req.body;

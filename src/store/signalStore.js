@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { io } from 'socket.io-client';
+import { useAuthStore } from './authStore.js';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
 
@@ -41,7 +42,12 @@ export const useSignalStore = create((set, get) => ({
   triggerScan: async () => {
     set(state => ({ scanStatus: { ...state.scanStatus, isScanning: true } }));
     try {
-      const res = await fetch('/api/scan', { method: 'POST' });
+      const res = await fetch('/api/scan', {
+        method: 'POST',
+        headers: {
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        }
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (err) {
@@ -68,7 +74,11 @@ export const useSignalStore = create((set, get) => ({
 
   fetchSystemNotes: async () => {
     try {
-      const res = await fetch('/api/system-notes');
+      const res = await fetch('/api/system-notes', {
+        headers: {
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        }
+      });
       const data = await res.json();
       if (res.ok) {
         set({ systemNotes: data.content });
@@ -83,7 +93,11 @@ export const useSignalStore = create((set, get) => ({
 
   fetchSettings: async () => {
     try {
-      const res = await fetch('/api/settings');
+      const res = await fetch('/api/settings', {
+        headers: {
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        }
+      });
       if (res.ok) {
         const settings = await res.json();
         // Update both the engine settings and the UI filter default
@@ -103,7 +117,10 @@ export const useSignalStore = create((set, get) => ({
     try {
       const res = await fetch('/api/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        },
         body: JSON.stringify(newSettings)
       });
       if (res.ok) {
@@ -117,7 +134,11 @@ export const useSignalStore = create((set, get) => ({
 
   fetchErrorLogs: async () => {
     try {
-      const res = await fetch('/api/logs');
+      const res = await fetch('/api/logs', {
+        headers: {
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         set({ errorLogs: data.logs || [] });
@@ -129,7 +150,11 @@ export const useSignalStore = create((set, get) => ({
 
   fetchScannerLogs: async () => {
     try {
-      const res = await fetch('/api/logs/scanner');
+      const res = await fetch('/api/logs/scanner', {
+        headers: {
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         set({ scannerLogs: data.logs || [] });
@@ -141,7 +166,12 @@ export const useSignalStore = create((set, get) => ({
 
   clearErrorLogs: async () => {
     try {
-      const res = await fetch('/api/logs', { method: 'DELETE' });
+      const res = await fetch('/api/logs', {
+        method: 'DELETE',
+        headers: {
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        }
+      });
       if (res.ok) {
         set({ errorLogs: [] });
       }
@@ -152,7 +182,12 @@ export const useSignalStore = create((set, get) => ({
 
   triggerTestError: async () => {
     try {
-      const res = await fetch('/api/logs/test', { method: 'POST' });
+      const res = await fetch('/api/logs/test', {
+        method: 'POST',
+        headers: {
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        }
+      });
       if (res.ok) {
         get().fetchErrorLogs();
       }
@@ -163,7 +198,12 @@ export const useSignalStore = create((set, get) => ({
 
   purgeAllData: async () => {
     try {
-      const res = await fetch('/api/settings/purge', { method: 'POST' });
+      const res = await fetch('/api/settings/purge', {
+        method: 'POST',
+        headers: {
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        }
+      });
       if (res.ok) {
         set({
           signals: [],

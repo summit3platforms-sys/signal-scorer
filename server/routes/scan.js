@@ -1,7 +1,11 @@
 import express from 'express';
 import { runFullScan } from '../cronJobs.js';
+import { requireMaster } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// All scan routes require master admin access
+router.use(requireMaster);
 
 // POST /api/scan
 // Triggers an immediate manual scan

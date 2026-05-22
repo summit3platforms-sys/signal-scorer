@@ -5,17 +5,9 @@ import {
   updateUserRole, 
   deleteUser 
 } from '../services/auth.js';
+import { requireMaster } from '../middleware/auth.js';
 
 const router = express.Router();
-
-// Middleware to protect administrative routes
-const requireAdmin = (req, res, next) => {
-  const userId = req.headers['x-user-id'];
-  if (userId !== 'QC25101') {
-    return res.status(403).json({ error: 'Forbidden: Access restricted to master admin' });
-  }
-  next();
-};
 
 // POST /api/waitlist — Register a new signup from waitlist (public)
 router.post('/', (req, res) => {
@@ -34,7 +26,7 @@ router.post('/', (req, res) => {
 });
 
 // GET /api/waitlist — Get all users (admin only)
-router.get('/', requireAdmin, (req, res) => {
+router.get('/', requireMaster, (req, res) => {
   try {
     const users = getAllUsers();
     res.json({ total: users.length, entries: users });
@@ -45,7 +37,7 @@ router.get('/', requireAdmin, (req, res) => {
 });
 
 // PATCH /api/waitlist/:uniqueId/role — Update user role (admin only)
-router.patch('/:uniqueId/role', requireAdmin, (req, res) => {
+router.patch('/:uniqueId/role', requireMaster, (req, res) => {
   try {
     const { uniqueId } = req.params;
     const { role } = req.body;
@@ -63,7 +55,7 @@ router.patch('/:uniqueId/role', requireAdmin, (req, res) => {
 });
 
 // DELETE /api/waitlist/:uniqueId — Delete user (admin only)
-router.delete('/:uniqueId', requireAdmin, (req, res) => {
+router.delete('/:uniqueId', requireMaster, (req, res) => {
   try {
     const { uniqueId } = req.params;
     deleteUser(uniqueId);

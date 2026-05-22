@@ -1,8 +1,12 @@
 import express from 'express';
 import { getErrorLogs, clearErrorLogs, logError } from '../services/database.js';
 import { scannerLogBuffer } from '../cronJobs.js';
+import { requireMaster } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// All logs routes require master admin access
+router.use(requireMaster);
 
 // GET /api/logs/scanner - Fetch current background scanner steps
 router.get('/scanner', (req, res) => {

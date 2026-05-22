@@ -21,6 +21,7 @@ import { initAuthTables } from './services/auth.js';
 import { initCronJobs, runFullScan } from './cronJobs.js';
 import { initBot } from '../lib/telegram.js';
 import { getSignals } from './cache.js';
+import { requireActiveUser } from './middleware/auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -48,7 +49,7 @@ app.use('/api/logs', logsRouter);
 app.use('/api/waitlist', waitlistRouter);
 app.get('/api/meta', (_req, res) => res.json({ service: 'Signal Scorer Pro', version: '2.0.0' }));
 
-app.get('/api/system-notes', (_req, res) => {
+app.get('/api/system-notes', requireActiveUser, (_req, res) => {
   try {
     const notesPath = join(__dirname, '..', 'project_system_notes.txt');
     if (existsSync(notesPath)) {

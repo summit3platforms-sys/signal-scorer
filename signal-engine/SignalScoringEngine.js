@@ -102,6 +102,11 @@ export class SignalScoringEngine {
       if (dbSettings.atrStopLoss) this.config.atrMultipliers.stopLoss = parseFloat(dbSettings.atrStopLoss);
       if (dbSettings.atrTakeProfit1) this.config.atrMultipliers.takeProfit1 = parseFloat(dbSettings.atrTakeProfit1);
       if (dbSettings.atrTakeProfit2) this.config.atrMultipliers.takeProfit2 = parseFloat(dbSettings.atrTakeProfit2);
+
+      // Inject user-configurable capital, risk, and leverage
+      if (dbSettings.capital)  this.config.capital  = parseFloat(dbSettings.capital);
+      if (dbSettings.riskPct)  this.config.riskPct  = parseFloat(dbSettings.riskPct) / 100;
+      if (dbSettings.leverage) this.config.leverage = parseFloat(dbSettings.leverage);
     }
   }
 
@@ -257,9 +262,9 @@ export class SignalScoringEngine {
     else if (finalScore >= this.config.thresholds.highConfidence) confidence = 'HIGH';
     else if (finalScore >= this.config.thresholds.minScore) confidence = 'MEDIUM';
 
-    // ── Dynamic ATR-Based TP/SL ──────────────────────────────────────────
+    // ── Dynamic ATR-Based TP/SL (Multi-Timeframe Weighted) ───────────────
     const { stopLoss, tp1, tp2, atr: finalAtr, positionSizing, tp1IsNetPositive } = this._calculateDynamicTargets(
-      candles15m, direction, currentPrice
+      candles15m, candles1h, candles4h, direction, currentPrice, regime
     );
     
     const riskReward = Math.abs(tp2 - currentPrice) / Math.abs(currentPrice - stopLoss);
@@ -286,6 +291,7 @@ export class SignalScoringEngine {
       reasons: allReasons.slice(0, 5),
       regime,
       volumeZScore: parseFloat(volZ.toFixed(2)),
+      atrWeighted: parseFloat(finalAtr.toFixed(6)),
       geminiVerdict: null,
       timestamp: Date.now(),
       fundingRate: fundingData ? parseFloat((fundingData.rate * 100).toFixed(6)) : null,
@@ -308,63 +314,106 @@ export class SignalScoringEngine {
     return results;
   }
 
-  // ── Dynamic ATR-Based Targets ────────────────────────────────────────
+  // ── Multi-Timeframe ATR-Based Dynamic Targets ─────────────────────────
 
   /**
-   * Computes SL/TP using exponentially-smoothed ATR(14) from raw candles.
-   * Markets are heteroscedastic — volatility clusters. Fixed % targets are
-   * the single biggest accuracy killer.
+   * Computes SL/TP using a weighted multi-timeframe ATR across 15m, 1h, and 4h candles.
+   * Regime-adaptive multipliers adjust for trending vs volatile vs ranging conditions.
+   *
+   * Weighting rationale:
+   *   1h  (50%) — primary trend confirmation timeframe
+   *   4h  (30%) — macro swing sizing for structural targets
+   *   15m (20%) — entry precision only, smallest weight to avoid noise
    */
-  _calculateDynamicTargets(candles, direction, entry) {
-    const trueRanges = candles.slice(1).map((c, i) => {
-      const prev = candles[i];
-      return Math.max(
-        c.high - c.low,
-        Math.abs(c.high - prev.close),
-        Math.abs(c.low - prev.close)
-      );
-    });
+  _calculateDynamicTargets(candles15m, candles1h, candles4h, direction, entry, regime) {
+    // Compute exponentially-smoothed ATR(14) for a given candle array
+    const calcATR = (candles) => {
+      if (!candles || candles.length < 15) return null;
+      const trueRanges = candles.slice(1).map((c, i) => {
+        const prev = candles[i];
+        return Math.max(
+          c.high - c.low,
+          Math.abs(c.high - prev.close),
+          Math.abs(c.low - prev.close)
+        );
+      });
+      const period = 14;
+      let atr = trueRanges[trueRanges.length - period];
+      for (let i = trueRanges.length - period + 1; i < trueRanges.length; i++) {
+        atr = atr * ((period - 1) / period) + trueRanges[i] * (1 / period);
+      }
+      return atr;
+    };
 
-    // Exponentially-smoothed ATR(14) for recency bias
-    const period = 14;
-    let atr = trueRanges[trueRanges.length - period];
-    for (let i = trueRanges.length - period + 1; i < trueRanges.length; i++) {
-      atr = atr * ((period - 1) / period) + trueRanges[i] * (1 / period);
+    const atr15m = calcATR(candles15m);
+    const atr1h  = calcATR(candles1h);
+    const atr4h  = calcATR(candles4h);
+
+    // Weighted multi-timeframe ATR:
+    // 1h gets heaviest weight — primary trend confirmation timeframe
+    // 4h contributes macro swing sizing
+    // 15m is entry precision only — smallest weight
+    let weightedATR;
+    if (atr1h && atr4h) {
+      weightedATR = (atr15m * 0.20) + (atr1h * 0.50) + (atr4h * 0.30);
+    } else if (atr1h) {
+      weightedATR = (atr15m * 0.35) + (atr1h * 0.65);
+    } else {
+      weightedATR = atr15m;
     }
 
-    const slMul = this.config.atrMultipliers.stopLoss;
-    const tp1Mul = this.config.atrMultipliers.takeProfit1;
-    const tp2Mul = this.config.atrMultipliers.takeProfit2;
+    // Regime-adaptive multipliers
+    let slMul, tp1Mul, tp2Mul;
+
+    switch (regime) {
+      case 'trending_up':
+      case 'trending_down':
+        // Strong trend — tight SL, wide TP to let momentum run
+        slMul  = this.config.atrMultipliers.stopLoss;    // user setting (default 2.0)
+        tp1Mul = 4.0;
+        tp2Mul = 7.0;
+        break;
+      case 'volatile':
+        // High volatility — wider SL to survive wicks, closer TP to bank profit
+        slMul  = Math.max(this.config.atrMultipliers.stopLoss, 3.0);
+        tp1Mul = 3.5;
+        tp2Mul = 5.5;
+        break;
+      default:
+        // Ranging or unknown — use user-configured settings as-is
+        slMul  = this.config.atrMultipliers.stopLoss;
+        tp1Mul = this.config.atrMultipliers.takeProfit1;
+        tp2Mul = this.config.atrMultipliers.takeProfit2;
+    }
 
     const stopLoss = direction === 'LONG'
-      ? entry - (atr * slMul)
-      : entry + (atr * slMul);
+      ? entry - (weightedATR * slMul)
+      : entry + (weightedATR * slMul);
 
     const tp1 = direction === 'LONG'
-      ? entry + (atr * tp1Mul)
-      : entry - (atr * tp1Mul);
+      ? entry + (weightedATR * tp1Mul)
+      : entry - (weightedATR * tp1Mul);
 
     const tp2 = direction === 'LONG'
-      ? entry + (atr * tp2Mul)
-      : entry - (atr * tp2Mul);
+      ? entry + (weightedATR * tp2Mul)
+      : entry - (weightedATR * tp2Mul);
 
     // ── Fee-Adjusted Break-Even Validation ──────────────────────────────
     // Binance taker fee = 0.05% each side = 0.10% round-trip
     // TP1 must exceed fee cost to be a net-positive trade
     const TAKER_FEE = 0.0005; // 0.05% per side
     const roundTripFeePct = TAKER_FEE * 2;
-    const breakEvenMovePct = roundTripFeePct; // minimum move needed to profit
 
     const tp1Pct = Math.abs(tp1 - entry) / entry;
-    const tp1IsNetPositive = tp1Pct > breakEvenMovePct;
+    const tp1IsNetPositive = tp1Pct > roundTripFeePct;
 
     // ── Position Sizing (capital-aware, risk-normalized) ─────────────────
-    // Default assumptions — these get overridden if settings expose them later
-    const CAPITAL = 1000;          // base capital in USDT
-    const RISK_PCT = 0.02;         // risk 2% of capital per trade
-    const LEVERAGE = 5;            // default 5x leverage
+    // Read from engine config with sensible defaults
+    const CAPITAL  = this.config.capital  || 1000;
+    const RISK_PCT = this.config.riskPct  || 0.02;
+    const LEVERAGE = this.config.leverage || 5;
 
-    const riskAmount = CAPITAL * RISK_PCT;                    // $20
+    const riskAmount = CAPITAL * RISK_PCT;                    // e.g. $20
     const slDistPct = Math.abs(entry - stopLoss) / entry;     // e.g. 0.018 = 1.8%
     const positionUsd = Math.min(riskAmount / slDistPct, CAPITAL * LEVERAGE);
     const positionQty = positionUsd / entry;
@@ -374,7 +423,7 @@ export class SignalScoringEngine {
     const potentialLoss = riskAmount + feeUsd;
 
     return {
-      stopLoss, tp1, tp2, atr,
+      stopLoss, tp1, tp2, atr: weightedATR,
       tp1IsNetPositive,
       positionSizing: {
         positionUsd: parseFloat(positionUsd.toFixed(2)),

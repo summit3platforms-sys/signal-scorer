@@ -1,8 +1,12 @@
 import express from 'express';
 import { getSettings, updateSettings, purgeAllData } from '../services/database.js';
 import { setSignals } from '../cache.js';
+import { requireMaster } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// All settings routes require master admin access
+router.use(requireMaster);
 
 router.get('/', (req, res) => {
   try {
@@ -47,4 +51,3 @@ router.post('/purge', (req, res) => {
 });
 
 export default router;
-
