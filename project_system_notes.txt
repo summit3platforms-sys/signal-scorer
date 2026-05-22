@@ -257,3 +257,5 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 TODO FEATURES
 --------------------------------------------------
 - Binance: Add automated trade execution (via authenticated API keys) based on the generated signals.
+36. SECURED ADMIN ENDPOINTS: Implemented requireRole middleware to protect backend administrative routes (settings, logs, manual scanning, telegram broadcast). Admin actions now require the { role: 'master' } verification from the frontend, checked against the backend database using the x-user-id header to prevent client-side localStorage spoofing.
+37. MULTI-TIMEFRAME ATR & POSITION SIZING: Replaced single 15m ATR calculation with a weighted multi-timeframe ATR (15m=20%, 1h=50%, 4h=30%) for dynamic targets. Integrated regime-adaptive multipliers to widen Stop Loss during volatility and expand Take Profit during strong trends. Exposed Capital, Risk %, and Leverage as configurable admin settings to power dynamic dollar-based position sizing calculations.
