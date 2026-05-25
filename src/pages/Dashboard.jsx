@@ -16,6 +16,7 @@ import {
 import { useSignalStore } from '../store/signalStore.js';
 import { useAuthStore } from '../store/authStore.js';
 import StatsBar from '../components/StatsBar.jsx';
+import RadarScanner from '../components/RadarScanner.jsx';
 import FilterBar from '../components/FilterBar.jsx';
 import SignalCard from '../components/SignalCard.jsx';
 import LiveTicker from '../components/LiveTicker.jsx';
@@ -236,6 +237,7 @@ export default function Dashboard() {
         {/* Tab Content */}
         {activeTab === 'ACTIVE' ? (
           <div className="space-y-5 animate-fadeSlide">
+            <RadarScanner />
             <FilterBar
               filters={filters}
               setFilter={setFilter}
