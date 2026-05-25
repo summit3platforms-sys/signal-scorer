@@ -236,37 +236,44 @@ export default function Dashboard() {
 
         {/* Tab Content */}
         {activeTab === 'ACTIVE' ? (
-          <div className="space-y-5 animate-fadeSlide">
-            <RadarScanner />
-            <FilterBar
-              filters={filters}
-              setFilter={setFilter}
-              total={signals.length}
-              showing={filteredSignals.length}
-            />
+          <div className="animate-fadeSlide flex gap-4 items-start">
+            {/* ── Left: Filter bar + signal cards ── */}
+            <div className="flex-1 min-w-0 space-y-4">
+              <FilterBar
+                filters={filters}
+                setFilter={setFilter}
+                total={signals.length}
+                showing={filteredSignals.length}
+              />
 
-            {scanStatus.isScanning && filteredSignals.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <RefreshCw className="animate-spin text-[#00d4aa]" size={32} />
-                <p className="text-gray-500 text-sm">Scanning {scanStatus.totalPairs || '—'} pairs…</p>
-              </div>
-            ) : filteredSignals.length === 0 ? (
-              <div className="text-center py-24 text-gray-600">
-                <p className="text-lg">No signals match the current filters.</p>
-                <p className="text-sm mt-2">Try lowering the minimum score or changing the direction filter.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredSignals.map((signal, i) => (
-                  <div key={signal.symbol} style={{ animationDelay: `${(i % 10) * 50}ms` }} className="animate-fadeSlide">
-                    <SignalCard
-                      signal={signal}
-                      livePrice={prices?.[signal.symbol]?.price}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+              {scanStatus.isScanning && filteredSignals.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 gap-4">
+                  <RefreshCw className="animate-spin text-[#00d4aa]" size={32} />
+                  <p className="text-gray-500 text-sm">Scanning {scanStatus.totalPairs || '—'} pairs…</p>
+                </div>
+              ) : filteredSignals.length === 0 ? (
+                <div className="text-center py-24 text-gray-600">
+                  <p className="text-lg">No signals match the current filters.</p>
+                  <p className="text-sm mt-2">Try lowering the minimum score or changing the direction filter.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {filteredSignals.map((signal, i) => (
+                    <div key={signal.symbol} style={{ animationDelay: `${(i % 10) * 50}ms` }} className="animate-fadeSlide">
+                      <SignalCard
+                        signal={signal}
+                        livePrice={prices?.[signal.symbol]?.price}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Right: Radar sidebar ── */}
+            <div className="hidden lg:block flex-shrink-0 w-64 xl:w-72 sticky top-4">
+              <RadarScanner />
+            </div>
           </div>
         ) : activeTab === 'HISTORY' ? (
           <HistoryTable history={tradeHistory} />
