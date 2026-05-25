@@ -15,6 +15,47 @@ function generateUniqueId(db) {
 export function initAuthTables() {
   const db = getDB();
 
+  // Rebuild users table if the old restricted CHECK constraint is present
+  try {
+    const schemaRow = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
+    if (schemaRow && schemaRow.sql && schemaRow.sql.includes("CHECK(status IN ('active', 'pending'))")) {
+      console.log('[Auth] Detected old restricted CHECK constraint on users.status. Rebuilding table...');
+      db.transaction(() => {
+        db.exec(`
+          PRAGMA foreign_keys=OFF;
+          
+          CREATE TABLE users_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uniqueId TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            role TEXT CHECK(role IN ('master', 'user', 'pending')) NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            referral TEXT,
+            createdAt INTEGER NOT NULL,
+            lastLogin INTEGER,
+            paidAt INTEGER,
+            expiresAt INTEGER,
+            subscriptionDays INTEGER,
+            paymentNotifiedAt INTEGER
+          );
+          
+          INSERT INTO users_new (id, uniqueId, email, role, status, referral, createdAt, lastLogin)
+          SELECT id, uniqueId, email, role, status, referral, createdAt, lastLogin FROM users;
+          
+          DROP TABLE users;
+          
+          ALTER TABLE users_new RENAME TO users;
+          
+          CREATE INDEX IF NOT EXISTS idx_users_uniqueId ON users(uniqueId);
+          CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+        `);
+      })();
+      console.log('[Auth] Users table successfully rebuilt and migrated without the restricted CHECK constraint.');
+    }
+  } catch (err) {
+    console.error('[Auth] Failed to rebuild users table schema:', err.message);
+  }
+
   // Create users table — status CHECK constraint broadened to support all subscription states
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
