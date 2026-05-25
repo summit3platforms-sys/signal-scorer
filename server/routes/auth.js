@@ -7,19 +7,26 @@ router.post('/login', (req, res) => {
   try {
     const { email, uniqueId } = req.body;
     if (!email || !uniqueId) {
-      return res.status(400).json({ error: 'Email and Access ID are required' });
+      return res.status(400).json({ error: 'Email and Unique ID are required' });
     }
 
     const user = getUserByCredentials(email, uniqueId);
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials or account is not active' });
+      return res.status(401).json({ 
+        error: 'Invalid credentials or access not yet granted. If you just submitted a request, please wait for approval.' 
+      });
     }
 
     res.json({
-      uniqueId: user.uniqueId,
-      email: user.email,
-      role: user.role,
-      status: user.status
+      success: true,
+      user: {
+        uniqueId: user.uniqueId,
+        email: user.email,
+        role: user.role,
+        status: user.status,          // approved | payment_pending | active | expired
+        expiresAt: user.expiresAt,
+        subscriptionDays: user.subscriptionDays
+      }
     });
   } catch (err) {
     console.error('[AuthRoute] Login error:', err.message);

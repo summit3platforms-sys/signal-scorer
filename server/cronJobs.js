@@ -6,6 +6,7 @@ import { validateSignal } from '../lib/gemini.js';
 import { sendAlert } from '../lib/telegram.js';
 import { setSignals, getSignals } from './cache.js';
 import { getSettings, getActiveSignals, updateSignalStatus, logError, getRecentSignalKeys, deleteExpiredSignals } from './services/database.js';
+import { checkExpiredSubscriptions } from './services/auth.js';
 
 let isScanning = false;
 
@@ -272,8 +273,15 @@ export function initCronJobs(io) {
   // Run cleanup once per day at 03:00 AM
   cron.schedule('0 3 * * *', () => {
     deleteExpiredSignals(7);
+    checkExpiredSubscriptions(); // expire any subscriptions that ran out during downtime
   });
   console.log('[Cron] Scheduled: daily expired signal cleanup at 03:00.');
+
+  // Check for expired subscriptions every hour
+  cron.schedule('0 * * * *', () => {
+    checkExpiredSubscriptions();
+  });
+  console.log('[Cron] Scheduled: hourly subscription expiry check.');
 
   // Initialize zero-cost WebSocket pricing via the centralized module
   console.log('[Stream] Starting WebSocket live price stream...');
@@ -282,6 +290,7 @@ export function initCronJobs(io) {
   // Run cleanup once on startup before scanning
   try {
     deleteExpiredSignals(7);
+    checkExpiredSubscriptions(); // expire any subscriptions that ran out during downtime
     console.log('[Cron] Startup signal expiry cleanup executed successfully.');
   } catch (err) {
     console.error('[Cron] Startup signal cleanup failed:', err.message);

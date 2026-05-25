@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Save, RefreshCw, Sliders, CheckCircle, Trash2, AlertTriangle } from 'lucide-react';
 import { useSignalStore } from '../store/signalStore.js';
+import { useAuthStore } from '../store/authStore.js';
 
 export default function SettingsTab() {
   const { engineSettings, fetchSettings, updateSettings, purgeAllData } = useSignalStore();
+  const currentUser = useAuthStore((state) => state.user);
+  const isMaster = currentUser?.role === 'master';
   
   const [localSettings, setLocalSettings] = useState({
     emaAlignment: 0.25,
@@ -19,7 +22,10 @@ export default function SettingsTab() {
     atrTakeProfit2: 4.5,
     capital: 1000,
     riskPct: 2,
-    leverage: 5
+    leverage: 5,
+    subscriptionPrice: 29,
+    subscriptionDays: 30,
+    tronAddress: ''
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -31,14 +37,14 @@ export default function SettingsTab() {
   // Sync local state when global state loads
   useEffect(() => {
     if (Object.keys(engineSettings).length > 0) {
-      setLocalSettings(engineSettings);
+      setLocalSettings(prev => ({ ...prev, ...engineSettings }));
     } else {
       fetchSettings();
     }
   }, [engineSettings]);
 
   const handleChange = (key, value) => {
-    setLocalSettings(prev => ({ ...prev, [key]: parseFloat(value) }));
+    setLocalSettings(prev => ({ ...prev, [key]: key === 'tronAddress' ? value : parseFloat(value) || value }));
   };
 
   const handleSave = async () => {
@@ -52,7 +58,6 @@ export default function SettingsTab() {
   const handlePurge = async () => {
     if (!confirmPurge) {
       setConfirmPurge(true);
-      // Auto-dismiss confirmation after 5 seconds
       setTimeout(() => setConfirmPurge(false), 5000);
       return;
     }
@@ -66,44 +71,37 @@ export default function SettingsTab() {
     }
   };
 
-  // Validate that weights equal exactly 1.00 (100%)
-  const totalWeight = (
-    localSettings.emaAlignment +
-    localSettings.rsiZone +
-    localSettings.macdMomentum +
-    localSettings.volumeSurge +
-    localSettings.bollingerPos +
-    localSettings.atrFilter
-  ).toFixed(2);
-
-  const isWeightValid = parseFloat(totalWeight) === 1.00;
-
   return (
-    <div className="bg-[#0f1923] border border-[#1e2d40] rounded-xl p-6 animate-fadeSlide max-w-4xl space-y-8">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Sliders className="text-[#00d4aa]" /> AI Engine Parameters
-        </h2>
-        <div className="flex items-center gap-4">
-          <span className={`text-sm font-mono font-bold ${isWeightValid ? 'text-emerald-400' : 'text-red-400'}`}>
-            Total Weight: {(parseFloat(totalWeight) * 100).toFixed(0)}%
-          </span>
-          <button
-            onClick={handleSave}
-            disabled={!isWeightValid || isSaving}
-            className="flex items-center gap-2 bg-[#00d4aa] text-black px-4 py-2 rounded-lg font-bold hover:bg-[#00b38f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? <RefreshCw className="animate-spin" size={16} /> : savedMsg ? <CheckCircle size={16} /> : <Save size={16} />}
-            {savedMsg ? 'Saved!' : 'Save Engine Config'}
-          </button>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-[#00d4aa]/10 border border-[#00d4aa]/20 flex items-center justify-center">
+            <Sliders className="h-5 w-5 text-[#00d4aa]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white">Engine Settings</h2>
+            <p className="text-xs text-gray-500">Tune scoring weights, thresholds, and risk parameters.</p>
+          </div>
         </div>
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
+            savedMsg
+              ? 'bg-emerald-500 text-white'
+              : 'bg-[#00d4aa] hover:bg-[#00b894] text-black'
+          } disabled:opacity-50 disabled:cursor-not-allowed shadow-lg`}
+        >
+          {isSaving ? (
+            <><RefreshCw className="animate-spin" size={16} /> Saving...</>
+          ) : savedMsg ? (
+            <><CheckCircle size={16} /> Saved!</>
+          ) : (
+            <><Save size={16} /> Save Settings</>
+          )}
+        </button>
       </div>
-
-      {!isWeightValid && (
-        <div className="bg-red-500/20 text-red-400 border border-red-500/30 p-4 rounded-lg text-sm">
-          <strong>Warning:</strong> The sum of all weights must be exactly 100%. Please adjust the sliders before saving.
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left Column: Weights */}
@@ -120,7 +118,7 @@ export default function SettingsTab() {
 
         {/* Right Column: General Thresholds */}
         <div className="space-y-6">
-          <h3 className="text-lg font-bold text-gray-300 border-b border-[#1e2d40] pb-2">Engine Settings & Cooldowns</h3>
+          <h3 className="text-lg font-bold text-gray-300 border-b border-[#1e2d40] pb-2">Engine Settings &amp; Cooldowns</h3>
           
           {/* Min Score */}
           <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
@@ -273,7 +271,7 @@ export default function SettingsTab() {
         </h3>
         <p className="text-sm text-gray-400 mb-4">
           Permanently erase <strong className="text-white">all signals, trade history, and error logs</strong> from the database. 
-          Engine settings (weights & thresholds) will be preserved. This action cannot be undone.
+          Engine settings (weights &amp; thresholds) will be preserved. This action cannot be undone.
         </p>
         <button
           onClick={handlePurge}
@@ -297,6 +295,54 @@ export default function SettingsTab() {
           )}
         </button>
       </div>
+
+      {/* ── Subscription & Payment Settings (Master only) ──────────────── */}
+      {isMaster && (
+        <div className="border border-[#1e2d40] rounded-xl p-5 mt-4 space-y-4">
+          <h3 className="text-lg font-bold text-gray-300 border-b border-[#1e2d40] pb-2">
+            💳 Subscription &amp; Payment Settings
+          </h3>
+
+          {/* Subscription Price */}
+          <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+            <div className="flex justify-between mb-2">
+              <label className="text-sm font-medium text-gray-300">Subscription Price (USDT)</label>
+              <span className="text-sm font-bold text-[#00d4aa]">${localSettings.subscriptionPrice ?? 29} USDT</span>
+            </div>
+            <input type="range" min="1" max="500" step="1"
+              value={localSettings.subscriptionPrice ?? 29}
+              onChange={(e) => handleChange('subscriptionPrice', e.target.value)}
+              className="w-full accent-[#00d4aa]" />
+            <p className="text-xs text-gray-500 mt-2">Amount users must pay in USDT (TRC-20) to activate access.</p>
+          </div>
+
+          {/* Subscription Duration */}
+          <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+            <div className="flex justify-between mb-2">
+              <label className="text-sm font-medium text-gray-300">Subscription Duration</label>
+              <span className="text-sm font-bold text-[#00d4aa]">{localSettings.subscriptionDays ?? 30} days</span>
+            </div>
+            <input type="range" min="1" max="365" step="1"
+              value={localSettings.subscriptionDays ?? 30}
+              onChange={(e) => handleChange('subscriptionDays', e.target.value)}
+              className="w-full accent-[#00d4aa]" />
+            <p className="text-xs text-gray-500 mt-2">How many days of access a payment grants. Applied when master confirms payment.</p>
+          </div>
+
+          {/* TRC-20 Wallet Address */}
+          <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+            <label className="text-sm font-medium text-gray-300 block mb-2">TRC-20 USDT Wallet Address</label>
+            <input
+              type="text"
+              value={localSettings.tronAddress ?? ''}
+              onChange={(e) => handleChange('tronAddress', e.target.value)}
+              placeholder="T..."
+              className="w-full bg-[#0f1923] border border-[#1e2d40] rounded-lg px-3 py-2 text-[#00d4aa] font-mono text-sm outline-none focus:border-[#00d4aa] transition-colors"
+            />
+            <p className="text-xs text-gray-500 mt-2">Your TRC-20 wallet address shown to users on the payment page. Keep this accurate.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -94,6 +94,9 @@ export function initDB() {
     atrTakeProfit1: '2.5',
     atrTakeProfit2: '4.5',
     capital: '1000',
+    subscriptionPrice: '29',
+    subscriptionDays: '30',
+    tronAddress: ''
     riskPct: '2',
     leverage: '5'
   };
@@ -127,7 +130,11 @@ export function getSettings() {
   const conn = getDB();
   const rows = conn.prepare(`SELECT * FROM settings`).all();
   const settings = {};
-  for (const row of rows) settings[row.key] = parseFloat(row.value);
+  // String-typed keys that must NOT be coerced to float
+  const STRING_KEYS = new Set(['tronAddress']);
+  for (const row of rows) {
+    settings[row.key] = STRING_KEYS.has(row.key) ? row.value : parseFloat(row.value);
+  }
   return settings;
 }
 
@@ -410,6 +417,9 @@ export function purgeAllData() {
       atrTakeProfit1: '2.5',
       atrTakeProfit2: '4.5',
     capital: '1000',
+    subscriptionPrice: '29',
+    subscriptionDays: '30',
+    tronAddress: ''
     riskPct: '2',
     leverage: '5'
     };

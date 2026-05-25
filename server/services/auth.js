@@ -14,13 +14,15 @@ function generateUniqueId(db) {
 
 export function initAuthTables() {
   const db = getDB();
+
+  // Create users table — status CHECK constraint broadened to support all subscription states
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       uniqueId TEXT UNIQUE NOT NULL,
       email TEXT UNIQUE NOT NULL,
       role TEXT CHECK(role IN ('master', 'user', 'pending')) NOT NULL,
-      status TEXT CHECK(status IN ('active', 'pending')) NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
       referral TEXT,
       createdAt INTEGER NOT NULL,
       lastLogin INTEGER
@@ -28,6 +30,13 @@ export function initAuthTables() {
     CREATE INDEX IF NOT EXISTS idx_users_uniqueId ON users(uniqueId);
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
   `);
+
+  // Safe migration — add new subscription columns if they don't already exist
+  const migrate = (sql) => { try { db.exec(sql); } catch(e) {} };
+  migrate(`ALTER TABLE users ADD COLUMN paidAt INTEGER`);
+  migrate(`ALTER TABLE users ADD COLUMN expiresAt INTEGER`);
+  migrate(`ALTER TABLE users ADD COLUMN subscriptionDays INTEGER`);
+  migrate(`ALTER TABLE users ADD COLUMN paymentNotifiedAt INTEGER`);
 
   // Auto-insert or update master user to ensure agentkuldeeps@gmail.com has access
   const exists = db.prepare(`SELECT * FROM users WHERE uniqueId = ?`).get('QC25101');
@@ -68,6 +77,78 @@ export function createUserFromWaitlist(email, referral) {
   return uniqueId;
 }
 
+// ── Subscription lifecycle functions ────────────────────────────────────────
+
+/**
+ * Master approves a pending user — status transitions to 'approved',
+ * allowing them to log in and reach the payment page.
+ */
+export function approveUser(uniqueId) {
+  const conn = getDB();
+  conn.prepare(`
+    UPDATE users SET status = 'approved', role = 'user' WHERE uniqueId = ?
+  `).run(uniqueId);
+}
+
+/**
+ * User clicks "I have paid" — transitions status to 'payment_pending'
+ * and records the notification timestamp. Returns the full user record
+ * so the caller can fire a Telegram alert.
+ */
+export function submitPayment(uniqueId) {
+  const conn = getDB();
+  conn.prepare(`
+    UPDATE users SET status = 'payment_pending', paymentNotifiedAt = ? WHERE uniqueId = ?
+  `).run(Date.now(), uniqueId);
+  return conn.prepare(`SELECT * FROM users WHERE uniqueId = ?`).get(uniqueId);
+}
+
+/**
+ * Master confirms payment on-chain — grants 'active' status and sets
+ * expiry date based on configured subscription duration.
+ */
+export function confirmPayment(uniqueId, subscriptionDays) {
+  const conn = getDB();
+  const now = Date.now();
+  const expiresAt = now + (subscriptionDays * 24 * 60 * 60 * 1000);
+  conn.prepare(`
+    UPDATE users 
+    SET status = 'active',
+        paidAt = ?,
+        expiresAt = ?,
+        subscriptionDays = ?,
+        role = 'user'
+    WHERE uniqueId = ?
+  `).run(now, expiresAt, subscriptionDays, uniqueId);
+}
+
+/**
+ * Runs periodically — expires any active subscriptions whose expiresAt
+ * timestamp has passed. Master (QC25101) is explicitly excluded.
+ */
+export function checkExpiredSubscriptions() {
+  const conn = getDB();
+  const now = Date.now();
+  const result = conn.prepare(`
+    UPDATE users 
+    SET status = 'expired'
+    WHERE status = 'active' 
+      AND expiresAt IS NOT NULL 
+      AND expiresAt < ?
+      AND uniqueId != 'QC25101'
+  `).run(now);
+  if (result.changes > 0) {
+    console.log(`[Auth] Expired ${result.changes} subscriptions`);
+  }
+}
+
+/**
+ * Login — allows any status except 'pending' to authenticate.
+ * The frontend then routes the user to the correct page based on status:
+ *   approved / payment_pending → /payment
+ *   active                     → /dashboard
+ *   expired                    → /expired
+ */
 export function getUserByCredentials(email, uniqueId) {
   const db = getDB();
   const normalizedEmail = email.toLowerCase().trim();
@@ -75,7 +156,7 @@ export function getUserByCredentials(email, uniqueId) {
 
   const user = db.prepare(`
     SELECT * FROM users
-    WHERE email = ? AND uniqueId = ? AND status = 'active'
+    WHERE email = ? AND uniqueId = ? AND status != 'pending'
   `).get(normalizedEmail, formattedId);
 
   if (user) {
