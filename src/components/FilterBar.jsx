@@ -28,48 +28,49 @@ export default function FilterBar({ filters, setFilter, total, showing }) {
         )}
       </div>
 
-      {/* Direction Toggle */}
-      <div className="flex gap-1 bg-[#0a0e17] rounded-lg p-1">
-        {directions.map(d => (
-          <button
-            key={d}
-            onClick={() => setFilter('direction', d)}
-            className={`px-3 py-1 rounded-md text-sm font-semibold transition-all duration-150 ${
-              filters.direction === d
-                ? d === 'LONG' ? 'bg-emerald-600 text-white' : d === 'SHORT' ? 'bg-red-600 text-white' : 'bg-[#1e2d40] text-white'
-                : 'text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            {d === 'LONG' ? '▲ ' : d === 'SHORT' ? '▼ ' : ''}{d}
-          </button>
-        ))}
-      </div>
+      {/* Direction + Timeframe — side by side on mobile */}
+      <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-1 bg-[#0a0e17] rounded-lg p-1">
+          {directions.map(d => (
+            <button
+              key={d}
+              onClick={() => setFilter('direction', d)}
+              className={`px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-semibold transition-all duration-150 ${
+                filters.direction === d
+                  ? d === 'LONG' ? 'bg-emerald-600 text-white' : d === 'SHORT' ? 'bg-red-600 text-white' : 'bg-[#1e2d40] text-white'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {d === 'LONG' ? '▲ ' : d === 'SHORT' ? '▼ ' : ''}{d}
+            </button>
+          ))}
+        </div>
 
-      {/* Timeframe Selector */}
-      <div className="flex gap-1 bg-[#0a0e17] rounded-lg p-1">
-        {timeframes.map(t => (
-          <button
-            key={t}
-            onClick={() => setFilter('timeframe', t)}
-            className={`px-3 py-1 rounded-md text-sm font-mono transition-all duration-150 ${
-              filters.timeframe === t ? 'bg-[#1e2d40] text-[#00d4aa]' : 'text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            {t}
-          </button>
-        ))}
+        <div className="flex gap-1 bg-[#0a0e17] rounded-lg p-1">
+          {timeframes.map(t => (
+            <button
+              key={t}
+              onClick={() => setFilter('timeframe', t)}
+              className={`px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-mono transition-all duration-150 ${
+                filters.timeframe === t ? 'bg-[#1e2d40] text-[#00d4aa]' : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Min Score Slider */}
-      <div className="flex items-center gap-3 flex-1 min-w-[180px]">
-        <span className="text-xs text-gray-500 whitespace-nowrap">Min Score:</span>
+      <div className="flex items-center gap-2 w-full sm:flex-1 sm:min-w-0">
+        <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0">Score:</span>
         <input
           type="range" min={10} max={90} step={5}
           value={filters.minScore}
           onChange={e => setFilter('minScore', Number(e.target.value))}
-          className="flex-1 h-1 accent-[#00d4aa] cursor-pointer"
+          className="flex-1 min-w-0 h-1 accent-[#00d4aa] cursor-pointer"
         />
-        <span className="text-sm font-mono text-[#00d4aa] w-10 text-right">{filters.minScore}+</span>
+        <span className="text-sm font-mono text-[#00d4aa] w-8 text-right flex-shrink-0">{filters.minScore}+</span>
       </div>
 
       {/* Count */}

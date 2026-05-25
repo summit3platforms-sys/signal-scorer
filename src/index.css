@@ -87,3 +87,10 @@ html, body, #root {
 @media (hover: none) {
   button { min-height: 36px; }
 }
+
+/* ── Radar sidebar: force hidden below lg, no exceptions ── */
+@media (max-width: 1023px) {
+  .radar-sidebar-col {
+    display: none !important;
+  }
+}
