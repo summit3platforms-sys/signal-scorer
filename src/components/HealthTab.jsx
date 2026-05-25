@@ -1,3 +1,4 @@
+import { useAuthStore } from '../store/authStore.js';
 import { useState, useEffect } from 'react';
 import { Activity, Database, Zap, MessageCircle, Send, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -37,7 +38,10 @@ export default function HealthTab() {
     try {
       const res = await fetch('/api/telegram/broadcast', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        },
         body: JSON.stringify({ message: customMsg })
       });
       

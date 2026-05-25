@@ -1,3 +1,4 @@
+import { useAuthStore } from '../store/authStore.js';
 import React, { useState, useEffect } from 'react';
 import { Users, Search, RefreshCw, Mail, Calendar, Key, AlertCircle } from 'lucide-react';
 
@@ -11,7 +12,11 @@ export default function WaitlistTab() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/waitlist');
+      const res = await fetch('/api/waitlist', {
+        headers: {
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        }
+      });
       if (!res.ok) throw new Error('Failed to fetch waitlist');
       const json = await res.json();
       setData(json);

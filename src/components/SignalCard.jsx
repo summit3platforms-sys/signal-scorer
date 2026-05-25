@@ -1,3 +1,4 @@
+import { useAuthStore } from '../store/authStore.js';
 import { useState } from 'react';
 import { Send, CheckCircle } from 'lucide-react';
 import ScoreRing from './ScoreRing.jsx';
@@ -77,7 +78,10 @@ export default function SignalCard({ signal, livePrice }) {
     try {
       const res = await fetch('/api/telegram/send-signal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': useAuthStore.getState().user?.uniqueId || ''
+        },
         body: JSON.stringify({ signal })
       });
       if (res.ok) {
