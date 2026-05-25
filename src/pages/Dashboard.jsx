@@ -182,15 +182,6 @@ export default function Dashboard() {
             <History size={16} /> Trade History
           </button>
           
-          <button
-            onClick={() => setActiveTab('NOTES')}
-            className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-              activeTab === 'NOTES' ? 'border-[#00d4aa] text-[#00d4aa]' : 'border-transparent text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            <FileText size={16} /> System Notes
-          </button>
-
           {/* Master Admin Only Tabs */}
           {user?.role === 'master' && (
             <>
@@ -228,6 +219,15 @@ export default function Dashboard() {
                 }`}
               >
                 <Users size={16} /> Users
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('NOTES')}
+                className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                  activeTab === 'NOTES' ? 'border-[#00d4aa] text-[#00d4aa]' : 'border-transparent text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                <FileText size={16} /> System Notes
               </button>
             </>
           )}
@@ -276,7 +276,7 @@ export default function Dashboard() {
           <ErrorLogsTab />
         ) : activeTab === 'USERS' && user?.role === 'master' ? (
           <UsersTab />
-        ) : activeTab === 'NOTES' ? (
+        ) : activeTab === 'NOTES' && user?.role === 'master' ? (
           <div className="bg-[#0f1923] border border-[#1e2d40] rounded-xl p-6 animate-fadeSlide">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <FileText className="text-[#00d4aa]" /> Project System Notes
