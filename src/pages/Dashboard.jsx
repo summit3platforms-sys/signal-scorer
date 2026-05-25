@@ -239,6 +239,10 @@ export default function Dashboard() {
           <div className="animate-fadeSlide flex gap-4 items-start w-full min-w-0 overflow-hidden">
             {/* ── Left: Filter bar + signal cards ── */}
             <div className="flex-1 min-w-0 max-w-full overflow-hidden space-y-4">
+              {/* Mobile radar — full width above filters, hidden on desktop */}
+              <div className="lg:hidden">
+                <RadarScanner mobile />
+              </div>
               <FilterBar
                 filters={filters}
                 setFilter={setFilter}
@@ -272,7 +276,7 @@ export default function Dashboard() {
             </div>
 
             {/* ── Right: Radar sidebar ── */}
-            <div className="radar-sidebar-col hidden lg:block flex-shrink-0 w-64 xl:w-72 sticky top-4 self-start">
+            <div className="hidden lg:block flex-shrink-0 w-64 xl:w-72 sticky top-4 self-start">
               <RadarScanner />
             </div>
           </div>
