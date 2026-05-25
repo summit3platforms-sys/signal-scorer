@@ -40,7 +40,7 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed. Please check your credentials.');
       }
 
-      login(data);
+      login(data.user);
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
