@@ -96,7 +96,7 @@ export function initDB() {
     capital: '1000',
     subscriptionPrice: '29',
     subscriptionDays: '30',
-    tronAddress: ''
+    tronAddress: '',
     riskPct: '2',
     leverage: '5'
   };
@@ -419,7 +419,7 @@ export function purgeAllData() {
     capital: '1000',
     subscriptionPrice: '29',
     subscriptionDays: '30',
-    tronAddress: ''
+    tronAddress: '',
     riskPct: '2',
     leverage: '5'
     };
