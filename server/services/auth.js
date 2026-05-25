@@ -33,6 +33,7 @@ export function initAuthTables() {
 
   // Safe migration — add new subscription columns if they don't already exist
   const migrate = (sql) => { try { db.exec(sql); } catch(e) {} };
+  migrate(`ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'pending'`);
   migrate(`ALTER TABLE users ADD COLUMN paidAt INTEGER`);
   migrate(`ALTER TABLE users ADD COLUMN expiresAt INTEGER`);
   migrate(`ALTER TABLE users ADD COLUMN subscriptionDays INTEGER`);
