@@ -36,14 +36,15 @@ function Sparkline({ closes = [] }) {
   );
 }
 
-export default function SignalCard({ signal, livePrice }) {
+export default function SignalCard({ signal, livePrice, liveChange }) {
   const user = useAuthStore((state) => state.user);
   const isMaster = user?.role === 'master';
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
 
   const price = livePrice ?? signal.entry;
-  const change = signal.priceChange ?? 0;
+  // Prefer live WebSocket 24h change; fall back to scan-time value
+  const change = liveChange ?? signal.priceChange ?? 0;
   const borderClass = REGIME_BORDER[signal.regime] ?? 'border-l-4 border-l-gray-700';
 
   const isLong = signal.direction === 'LONG';

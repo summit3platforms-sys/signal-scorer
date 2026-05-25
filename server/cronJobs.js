@@ -231,7 +231,7 @@ function processPriceUpdate(io, prices) {
       if (now2 - lastEmitTime >= 2000) {
         const pricesObj = {};
         for (const [sym, ticker] of prices.entries()) {
-          pricesObj[sym] = { price: ticker.price };
+          pricesObj[sym] = { price: ticker.price, change24h: ticker.change24h ?? 0 };
         }
         io.emit('price:update', pricesObj);
         lastEmitTime = now2;

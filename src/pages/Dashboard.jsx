@@ -263,6 +263,7 @@ export default function Dashboard() {
                       <SignalCard
                         signal={signal}
                         livePrice={prices?.[signal.symbol]?.price}
+                        liveChange={prices?.[signal.symbol]?.change24h}
                       />
                     </div>
                   ))}
