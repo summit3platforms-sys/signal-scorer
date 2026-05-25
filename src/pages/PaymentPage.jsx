@@ -21,7 +21,7 @@ export default function PaymentPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/settings')
+    fetch('/api/settings/public')
       .then(r => r.json())
       .then(data => {
         setSettings({

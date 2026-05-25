@@ -5,6 +5,20 @@ import { requireMaster } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Public route to fetch subscription details for payment page
+router.get('/public', (req, res) => {
+  try {
+    const settings = getSettings();
+    res.json({
+      subscriptionPrice: settings.subscriptionPrice ?? 29,
+      subscriptionDays: settings.subscriptionDays ?? 30,
+      tronAddress: settings.tronAddress ?? ''
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch public settings', message: err.message });
+  }
+});
+
 // All settings routes require master admin access
 router.use(requireMaster);
 
