@@ -174,7 +174,7 @@ export default function SignalCard({ signal, livePrice, liveChange }) {
       </div>
 
       {/* Trade Levels */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono">
+      <div className="grid grid-cols-2 gap-x-2 sm:gap-x-4 gap-y-1 text-xs font-mono">
         <div className="text-gray-400">Entry</div>
         <div className="text-white">${fmtPrice(signal.entry)}</div>
         <div className="text-red-400">Stop Loss</div>

@@ -63,3 +63,27 @@ input[type="range"]::-webkit-slider-thumb {
   background: #00d4aa;
   cursor: pointer;
 }
+
+/* ── Mobile/Responsive Additions ── */
+@media (max-width: 400px) {
+  .xs\:flex  { display: flex; }
+  .xs\:inline { display: inline; }
+  .xs\:hidden { display: none; }
+}
+
+/* Prevent horizontal overflow globally */
+html, body, #root {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Smooth scrollbar on webkit */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #0a0e17; }
+::-webkit-scrollbar-thumb { background: #1e2d40; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #2a3d55; }
+
+/* Better tap targets on touch */
+@media (hover: none) {
+  button { min-height: 36px; }
+}

@@ -5,9 +5,9 @@ export default function FilterBar({ filters, setFilter, total, showing }) {
   const timeframes = ['5m', '15m', '1h', '4h'];
 
   return (
-    <div className="flex flex-wrap items-center gap-4 bg-[#0f1923] border border-[#1e2d40] rounded-xl px-4 py-3">
+    <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 bg-[#0f1923] border border-[#1e2d40] rounded-xl px-3 sm:px-4 py-3">
       {/* Search Bar */}
-      <div className="relative flex items-center min-w-[180px] max-w-[260px] flex-1">
+      <div className="relative flex items-center w-full sm:min-w-[160px] sm:max-w-[240px] sm:flex-1">
         <span className="absolute left-3 text-gray-500">
           <Search size={16} />
         </span>
@@ -73,7 +73,7 @@ export default function FilterBar({ filters, setFilter, total, showing }) {
       </div>
 
       {/* Count */}
-      <div className="ml-auto text-xs text-gray-500 whitespace-nowrap">
+      <div className="text-xs text-gray-500 whitespace-nowrap sm:ml-auto">
         Showing <span className="text-white font-mono">{showing}</span> of <span className="text-white font-mono">{total}</span> signals
       </div>
     </div>

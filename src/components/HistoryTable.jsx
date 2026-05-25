@@ -65,15 +65,16 @@ export default function HistoryTable({ history }) {
 
   return (
     <div className="bg-[#0f1923] border border-[#1e2d40] rounded-xl overflow-hidden animate-fadeSlide flex flex-col justify-between min-h-[460px]">
-      <div className="overflow-x-auto">
+      {/* Desktop table */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-[#1e2d40]/50 text-gray-400 text-xs uppercase tracking-wider">
             <tr>
-              <th className="px-6 py-4 font-medium">Closed At</th>
-              <th className="px-6 py-4 font-medium">Pair / Dir</th>
-              <th className="px-6 py-4 font-medium">Result</th>
-              <th className="px-6 py-4 font-medium">Entry</th>
-              <th className="px-6 py-4 font-medium text-right">PnL %</th>
+              <th className="px-4 py-3 font-medium">Closed At</th>
+              <th className="px-4 py-3 font-medium">Pair / Dir</th>
+              <th className="px-4 py-3 font-medium">Result</th>
+              <th className="px-4 py-3 font-medium">Entry</th>
+              <th className="px-4 py-3 font-medium text-right">PnL %</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#1e2d40]">
@@ -81,32 +82,19 @@ export default function HistoryTable({ history }) {
               const isWin = trade.status.startsWith('WIN');
               const isLoss = trade.status === 'LOSS_SL';
               const pnlColor = isWin ? 'text-emerald-400' : isLoss ? 'text-red-400' : 'text-gray-400';
-              const pnlPrefix = isWin ? '+' : isLoss ? '' : '';
-              
+              const pnlPrefix = isWin ? '+' : '';
               return (
                 <tr key={trade.id} className="hover:bg-[#1e2d40]/20 transition-colors">
-                  <td className="px-6 py-4 text-gray-400 font-mono text-xs">
-                    {formatDate(trade.closedAt || trade.createdAt)}
-                  </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3 text-gray-400 font-mono text-xs">{formatDate(trade.closedAt || trade.createdAt)}</td>
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="font-bold">{trade.symbol}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                        trade.direction === 'LONG' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {trade.direction}
-                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${trade.direction === 'LONG' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>{trade.direction}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    {getStatusBadge(trade.status)}
-                  </td>
-                  <td className="px-6 py-4 font-mono text-gray-300">
-                    ${formatPrice(trade.entry)}
-                  </td>
-                  <td className={`px-6 py-4 text-right font-mono font-bold ${pnlColor}`}>
-                    {pnlPrefix}{trade.maxProfitPct ? trade.maxProfitPct.toFixed(2) : '0.00'}%
-                  </td>
+                  <td className="px-4 py-3">{getStatusBadge(trade.status)}</td>
+                  <td className="px-4 py-3 font-mono text-gray-300">${formatPrice(trade.entry)}</td>
+                  <td className={`px-4 py-3 text-right font-mono font-bold ${pnlColor}`}>{pnlPrefix}{trade.maxProfitPct ? trade.maxProfitPct.toFixed(2) : '0.00'}%</td>
                 </tr>
               );
             })}
@@ -114,10 +102,35 @@ export default function HistoryTable({ history }) {
         </table>
       </div>
 
+      {/* Mobile card list */}
+      <div className="sm:hidden divide-y divide-[#1e2d40]">
+        {paginatedHistory.map((trade) => {
+          const isWin = trade.status.startsWith('WIN');
+          const isLoss = trade.status === 'LOSS_SL';
+          const pnlColor = isWin ? 'text-emerald-400' : isLoss ? 'text-red-400' : 'text-gray-400';
+          const pnlPrefix = isWin ? '+' : '';
+          return (
+            <div key={trade.id} className="px-4 py-3 flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="font-bold text-sm">{trade.symbol}</span>
+                  <span className={`text-[9px] px-1 py-0.5 rounded font-bold ${trade.direction === 'LONG' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>{trade.direction}</span>
+                </div>
+                <div className="text-[10px] text-gray-500 font-mono">{formatDate(trade.closedAt || trade.createdAt)}</div>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                {getStatusBadge(trade.status)}
+                <span className={`text-sm font-mono font-bold ${pnlColor}`}>{pnlPrefix}{trade.maxProfitPct ? trade.maxProfitPct.toFixed(2) : '0.00'}%</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-[#1e2d40] px-6 py-4 bg-[#0a0e17]">
-          <div className="text-xs text-gray-500">
+        <div className="flex items-center justify-between border-t border-[#1e2d40] px-3 sm:px-6 py-3 sm:py-4 bg-[#0a0e17] flex-wrap gap-2">
+          <div className="text-xs text-gray-500 hidden sm:block">
             Showing <span className="text-white font-mono">{startIndex + 1}</span> to <span className="text-white font-mono">{Math.min(startIndex + itemsPerPage, history.length)}</span> of <span className="text-white font-mono">{history.length}</span> trades
           </div>
 

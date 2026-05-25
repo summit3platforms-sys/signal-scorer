@@ -8,13 +8,13 @@ function StatCard({ label, value, sub, color, Icon }) {
     red: 'text-red-400',
   };
   return (
-    <div className="flex-1 bg-[#0f1923] border border-[#1e2d40] rounded-xl p-4 flex items-center gap-4">
-      <div className={`p-2 rounded-lg bg-[#1e2d40] ${colorMap[color]}`}>
+    <div className="flex-1 bg-[#0f1923] border border-[#1e2d40] rounded-xl p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
+      <div className={`hidden sm:flex p-2 rounded-lg bg-[#1e2d40] ${colorMap[color]}`}>
         <Icon size={20} />
       </div>
       <div>
-        <div className="text-xs text-gray-500 uppercase tracking-widest mb-0.5">{label}</div>
-        <div className={`text-2xl font-bold font-mono ${colorMap[color]}`}>{value}</div>
+        <div className="text-[9px] sm:text-xs text-gray-500 uppercase tracking-widest mb-0.5">{label}</div>
+        <div className={`text-lg sm:text-2xl font-bold font-mono ${colorMap[color]}`}>{value}</div>
         {sub && <div className="text-xs text-gray-600 mt-0.5">{sub}</div>}
       </div>
     </div>
@@ -26,7 +26,7 @@ export default function StatsBar({ stats, totalPairs, activeCount }) {
   const expectancyStr = expVal > 0 ? `+${expVal}%` : `${expVal}%`;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-3">
       <StatCard label="Active Signals" value={activeCount ?? 0} sub="Currently open" color="green" Icon={Activity} />
       <StatCard label="Total Signals" value={stats?.totalSignals ?? 0} sub={`of ${totalPairs ?? '—'} pairs`} color="blue" Icon={TrendingUp} />
       <StatCard label="Overall Accuracy" value={`${stats?.accuracy ?? 0}%`} sub="Weighted Win Rate" color="blue" Icon={Target} />

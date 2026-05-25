@@ -246,7 +246,7 @@ export default function UsersTab() {
             <span className="font-medium text-sm">No members found matching active search.</span>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-3 sm:mx-0">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-white/5 bg-white/[0.01]">

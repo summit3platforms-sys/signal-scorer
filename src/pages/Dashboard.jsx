@@ -80,7 +80,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#0a0e17] text-white" style={{ backgroundImage: 'radial-gradient(circle, #1e2d40 1px, transparent 1px)', backgroundSize: '32px 32px' }}>
       
       {/* Sticky Header */}
-      <header className="sticky top-0 z-40 bg-[#0a0e17]/90 backdrop-blur-md border-b border-[#1e2d40] px-6 py-3">
+      <header className="sticky top-0 z-40 bg-[#0a0e17]/90 backdrop-blur-md border-b border-[#1e2d40] px-3 sm:px-6 py-3">
         <div className="max-w-screen-2xl mx-auto flex items-center justify-between gap-4 flex-wrap">
           {/* Left: Logo and Active User Badge */}
           <div className="flex items-center gap-4 flex-wrap">
@@ -89,11 +89,11 @@ export default function Dashboard() {
                 <CandlestickChart className="text-[#00d4aa]" size={22} />
                 <span className="text-lg font-bold text-white tracking-tight">Quantum Candle <span className="text-[#00d4aa]">AI</span></span>
               </div>
-              <div className="text-[10px] text-gray-600 tracking-widest uppercase mt-0.5">Next-Generation Crypto Signal Engine</div>
+              <div className="hidden sm:block text-[10px] text-gray-600 tracking-widest uppercase mt-0.5">Next-Generation Crypto Signal Engine</div>
             </div>
 
             {user && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-white/[0.03] border border-[#1e2d40]/40 rounded-full text-xs">
+              <div className="hidden xs:flex items-center gap-2 px-3 py-1 bg-white/[0.03] border border-[#1e2d40]/40 rounded-full text-xs">
                 <span className="font-mono text-gray-500 font-medium">Account:</span>
                 <span className="font-mono font-bold text-[#f0b429]">{user.uniqueId}</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-[#00d4aa]" />
@@ -103,7 +103,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right: Status Controls and Logout */}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
             <div className="flex items-center gap-1.5">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-600'}`} />
               <span className={`text-xs font-mono ${isConnected ? 'text-emerald-400' : 'text-gray-500'}`}>
@@ -127,10 +127,10 @@ export default function Dashboard() {
             <button
               onClick={handleRescan}
               disabled={scanStatus.isScanning}
-              className="flex items-center gap-1.5 text-sm border border-[#00d4aa] text-[#00d4aa] px-3 py-1.5 rounded-lg hover:bg-[#00d4aa]/10 transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs sm:text-sm border border-[#00d4aa] text-[#00d4aa] px-2 sm:px-3 py-1.5 rounded-lg hover:bg-[#00d4aa]/10 transition-all disabled:opacity-50"
             >
               <RefreshCw size={14} className={scanStatus.isScanning ? 'animate-spin' : ''} />
-              {scanStatus.isScanning ? 'Scanning…' : 'Rescan Now'}
+              <span className="hidden sm:inline">{scanStatus.isScanning ? 'Scanning…' : 'Rescan Now'}</span><span className="sm:hidden">{scanStatus.isScanning ? '…' : 'Scan'}</span>
             </button>
 
             <button onClick={() => setShowModal(true)} className="text-gray-500 hover:text-white transition-colors">
@@ -151,7 +151,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="max-w-screen-2xl mx-auto px-6 py-6 space-y-6">
+      <main className="max-w-screen-2xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Stats Bar */}
         <StatsBar stats={stats} totalPairs={scanStatus.totalPairs} activeCount={signals.length} />
 
@@ -236,7 +236,7 @@ export default function Dashboard() {
 
         {/* Tab Content */}
         {activeTab === 'ACTIVE' ? (
-          <div className="animate-fadeSlide flex gap-4 items-start">
+          <div className="animate-fadeSlide flex gap-4 items-start min-w-0">
             {/* ── Left: Filter bar + signal cards ── */}
             <div className="flex-1 min-w-0 space-y-4">
               <FilterBar
