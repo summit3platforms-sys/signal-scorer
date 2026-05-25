@@ -37,6 +37,8 @@ function Sparkline({ closes = [] }) {
 }
 
 export default function SignalCard({ signal, livePrice }) {
+  const user = useAuthStore((state) => state.user);
+  const isMaster = user?.role === 'master';
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
 
@@ -157,10 +159,14 @@ export default function SignalCard({ signal, livePrice }) {
           )}
         </div>
         <button
-          onClick={handleTelegramSend}
-          disabled={isSending || sendSuccess}
-          title="Send to Telegram"
-          className="text-gray-400 hover:text-[#0088cc] transition-colors disabled:opacity-50"
+          onClick={isMaster ? handleTelegramSend : undefined}
+          disabled={isSending || sendSuccess || !isMaster}
+          title={isMaster ? 'Send to Telegram' : 'Only master can send signals'}
+          className={`transition-colors ${
+            isMaster
+              ? 'text-gray-400 hover:text-[#0088cc] disabled:opacity-50 cursor-pointer'
+              : 'text-gray-600 cursor-not-allowed opacity-40'
+          }`}
         >
           {sendSuccess ? <CheckCircle size={18} className="text-emerald-500" /> : <Send size={18} />}
         </button>
