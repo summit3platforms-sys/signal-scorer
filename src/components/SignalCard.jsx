@@ -68,7 +68,6 @@ export default function SignalCard({ signal, livePrice }) {
   };
 
   const last20Closes = signal.sparkline || [];
-  const gemini = signal.geminiVerdict;
 
   const handleTelegramSend = async (e) => {
     e.stopPropagation();
@@ -185,15 +184,6 @@ export default function SignalCard({ signal, livePrice }) {
         <div className="text-gray-400">R:R</div>
         <div className="text-white">{rr}x</div>
       </div>
-
-      {/* Gemini verdict if available */}
-      {gemini && (
-        <div className="mt-3">
-          <div className={`text-[10px] font-bold px-2 py-1 rounded border ${gemini.verdict === 'CONFIRM' ? 'bg-emerald-900/20 text-emerald-400 border-emerald-900/50' : gemini.verdict === 'REJECT' ? 'bg-red-900/20 text-red-400 border-red-900/50' : 'bg-yellow-900/20 text-yellow-400 border-yellow-900/50'}`}>
-            AI: {gemini.verdict} — {gemini.reason}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

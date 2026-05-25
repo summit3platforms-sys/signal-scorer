@@ -2,7 +2,6 @@ import cron from 'node-cron';
 import { startPriceStream, getStreamReadyState } from '../lib/priceStream.js';
 import { getTopSymbolsByVolume, getMultipleKlines, getAllTickers, getCurrentWeight, getFundingRates } from '../lib/binance.js';
 import { SignalScoringEngine } from '../signal-engine/SignalScoringEngine.js';
-import { validateSignal } from '../lib/gemini.js';
 import { sendAlert } from '../lib/telegram.js';
 import { setSignals, getSignals } from './cache.js';
 import { getSettings, getActiveSignals, updateSignalStatus, logError, getRecentSignalKeys, deleteExpiredSignals } from './services/database.js';
@@ -119,24 +118,18 @@ export async function runFullScan(io) {
       }
     }
 
-    // Step 6: Gemini Validation
-    const highConf = actionable.filter(s => s.score >= engine.getConfig().thresholds.highConfidence);
-    logScanStep(io, `[Scanner] Step 6: Async validation. ${highConf.length} signals meet high confidence threshold (${engine.getConfig().thresholds.highConfidence}).`);
-    if (highConf.length > 0) {
+    // Step 6: Telegram Alerts
+    const alertable = actionable.filter(s => s.score >= engine.getConfig().thresholds.alertScore);
+    logScanStep(io, `[Scanner] Step 6: Sending Telegram alerts for ${alertable.length} signal(s) above alert threshold.`);
+    if (alertable.length > 0) {
       (async () => {
-        for (const signal of highConf) {
+        for (const signal of alertable) {
           try {
-            logScanStep(io, `[Gemini] Validating signal for ${signal.symbol}...`);
-            const verdict = await validateSignal(signal);
-            signal.geminiVerdict = verdict.verdict ? verdict : null;
-            logScanStep(io, `[Gemini] Result for ${signal.symbol}: ${verdict.verdict}`);
-            if (signal.score >= engine.getConfig().thresholds.alertScore) {
-              logScanStep(io, `[Telegram] Dispatching alert message for ${signal.symbol}...`);
-              await sendAlert(signal);
-            }
+            logScanStep(io, `[Telegram] Dispatching alert message for ${signal.symbol}...`);
+            await sendAlert(signal);
           } catch (err) {
-            logScanStep(io, `[Gemini] Validation failed for ${signal.symbol}: ${err.message}`);
-            logError('Gemini AI', `Validation failed for ${signal.symbol}: ${err.message}`, err.stack);
+            console.error(`[Telegram] Alert failed for ${signal.symbol}: ${err.message}`);
+            logError('Telegram', `Alert failed for ${signal.symbol}: ${err.message}`, err.stack);
           }
         }
       })();

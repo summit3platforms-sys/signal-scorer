@@ -292,7 +292,6 @@ export class SignalScoringEngine {
       regime,
       volumeZScore: parseFloat(volZ.toFixed(2)),
       atrWeighted: parseFloat(finalAtr.toFixed(6)),
-      geminiVerdict: null,
       timestamp: Date.now(),
       fundingRate: fundingData ? parseFloat((fundingData.rate * 100).toFixed(6)) : null,
       fundingBias: fundingScore > 0 ? 'CONFIRMS' : fundingScore < 0 ? 'OPPOSES' : 'NEUTRAL',

@@ -37,7 +37,6 @@ export function getSignals({ direction, minScore, limit = 200 } = {}) {
       reasons: JSON.parse(s.reasons || '[]'),
       subScores: JSON.parse(s.subScores || '{}'),
       regime: s.regime,
-      geminiVerdict: s.geminiVerdict ? JSON.parse(s.geminiVerdict) : null,
       timestamp: s.createdAt,
       fromDb: true // flag to identify persistent signals
     };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Activity, Database, Zap, MessageCircle, BrainCircuit, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { Activity, Database, Zap, MessageCircle, Send, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function HealthTab() {
   const [healthData, setHealthData] = useState(null);
@@ -99,12 +99,6 @@ export default function HealthTab() {
             icon={MessageCircle} 
             data={services.telegram} 
             description="Push notifications & alerts"
-          />
-          <HealthCard 
-            title="Gemini AI" 
-            icon={BrainCircuit} 
-            data={services.gemini} 
-            description="Advanced signal validation"
           />
         </div>
       </div>
