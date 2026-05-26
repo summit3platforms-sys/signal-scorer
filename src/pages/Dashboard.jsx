@@ -11,7 +11,8 @@ import {
   Stethoscope, 
   AlertOctagon, 
   Users,
-  LogOut
+  LogOut,
+  Star
 } from 'lucide-react';
 import { useSignalStore } from '../store/signalStore.js';
 import { useAuthStore } from '../store/authStore.js';
@@ -52,7 +53,6 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState('ACTIVE');
   const [pinnedSymbols, setPinnedSymbols] = useState(getPinned());
-  const [showPinnedOnly, setShowPinnedOnly] = useState(false);
 
   useEffect(() => {
     initSocket();
@@ -190,6 +190,22 @@ export default function Dashboard() {
             <History size={16} /> Trade History
           </button>
           
+          <button
+            onClick={() => setActiveTab('WATCHLIST')}
+            className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === 'WATCHLIST' ? 'border-[#f0b429] text-[#f0b429]' : 'border-transparent text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <Star size={16} /> Watchlist
+            {pinnedSymbols.length > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs font-mono font-bold transition-colors ${
+                activeTab === 'WATCHLIST' ? 'bg-[#f0b429]/15 text-[#f0b429] border border-[#f0b429]/30' : 'bg-gray-800 text-gray-400 border border-gray-700/50'
+              }`}>
+                {pinnedSymbols.length}
+              </span>
+            )}
+          </button>
+          
           {/* Master Admin Only Tabs */}
           {user?.role === 'master' && (
             <>
@@ -255,9 +271,6 @@ export default function Dashboard() {
                 setFilter={setFilter}
                 total={signals.length}
                 showing={filteredSignals.length}
-                pinnedCount={pinnedSymbols.length}
-                showPinnedOnly={showPinnedOnly}
-                onTogglePinnedFilter={() => setShowPinnedOnly(p => !p)}
               />
 
               {scanStatus.isScanning && filteredSignals.length === 0 ? (
@@ -273,9 +286,7 @@ export default function Dashboard() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(() => {
-                    const list = showPinnedOnly
-                      ? filteredSignals.filter(s => pinnedSymbols.includes(s.symbol))
-                      : [...filteredSignals].sort((a, b) => {
+                    const list = [...filteredSignals].sort((a, b) => {
                           const ap = pinnedSymbols.includes(a.symbol) ? 0 : 1;
                           const bp = pinnedSymbols.includes(b.symbol) ? 0 : 1;
                           return ap - bp;
@@ -303,6 +314,40 @@ export default function Dashboard() {
           </div>
         ) : activeTab === 'HISTORY' ? (
           <HistoryTable history={tradeHistory} />
+        ) : activeTab === 'WATCHLIST' ? (
+          <div className="animate-fadeSlide space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Star size={18} className="text-[#f0b429]" /> Watchlist
+                <span className="text-sm font-normal text-gray-500">— {pinnedSymbols.length} pinned signal{pinnedSymbols.length !== 1 ? 's' : ''}</span>
+              </h2>
+            </div>
+            {pinnedSymbols.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 gap-4 text-gray-500">
+                <Star size={32} className="opacity-30" />
+                <p className="text-lg">No pinned signals yet</p>
+                <p className="text-sm text-center max-w-md">
+                  Click the <Star size={12} className="inline text-gray-400 -mt-0.5" /> star icon on any signal card in the Active Signals tab to pin it here for quick access.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {signals
+                  .filter(s => pinnedSymbols.includes(s.symbol))
+                  .map((signal, i) => (
+                    <div key={signal.symbol} style={{ animationDelay: `${i * 50}ms` }} className="animate-fadeSlide">
+                      <SignalCard
+                        signal={signal}
+                        livePrice={prices?.[signal.symbol]?.price}
+                        liveChange={prices?.[signal.symbol]?.change24h}
+                        isPinned={true}
+                        onTogglePin={(sym) => setPinnedSymbols(togglePinned(sym))}
+                      />
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
         ) : activeTab === 'SETTINGS' && user?.role === 'master' ? (
           <SettingsTab />
         ) : activeTab === 'HEALTH' && user?.role === 'master' ? (
