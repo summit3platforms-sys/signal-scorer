@@ -38,29 +38,30 @@ function Sparkline({ closes = [] }) {
 }
 
 // ── Entry Countdown Bar ───────────────────────────────────────────────────────
-// Visible only while entry window is open (age < entryWindowMinutes, tp1Hit = 0)
-// Drains green → amber → red. Confirms or disappears after window closes.
+// Drains green→amber→red over entryWindowMinutes. Updates every second.
+// Shows "✓ Entry Confirmed" in the 5-min grace window after the check fires.
+// Disappears after grace window, or immediately if tp1Hit = 1.
 function EntryCountdownBar({ createdAt, tp1Hit, entryWindowMinutes = 30 }) {
-  const [tick, setTick] = useState(0);
-  const [confirmed, setConfirmed] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 1000);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
+  // Never show bar if TP1 already hit (market confirmed entry)
   if (!createdAt || tp1Hit === 1) return null;
 
-  const windowMs    = entryWindowMinutes * 60 * 1000;
-  const graceMs     = 5 * 60 * 1000;                   // 5-min backend grace window
-  const age         = Date.now() - (typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt);
-  const remaining   = windowMs - age;                   // ms left in window
-  const pct         = Math.max(0, Math.min(100, (remaining / windowMs) * 100));
+  const windowMs  = entryWindowMinutes * 60 * 1000;
+  const graceMs   = 5 * 60 * 1000;
+  const created   = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt;
+  const age       = now - created;
 
-  // Window has closed — the backend may have confirmed or invalidated.
-  // Show a brief "✓ Entry Confirmed" state (signal is still ACTIVE = server kept it).
-  if (age >= windowMs && age < windowMs + graceMs) {
-    if (!confirmed) setConfirmed(true);
+  // Fully past both window and grace — hide completely
+  if (age >= windowMs + graceMs) return null;
+
+  // In the 5-min grace window: backend validated it (still ACTIVE = confirmed)
+  if (age >= windowMs) {
     return (
       <div className="flex items-center gap-1.5 my-2 px-2 py-1 rounded-lg bg-emerald-900/30 border border-emerald-700/30">
         <span className="text-emerald-400 text-[10px]">●</span>
@@ -71,23 +72,24 @@ function EntryCountdownBar({ createdAt, tp1Hit, entryWindowMinutes = 30 }) {
     );
   }
 
-  // Window fully passed + grace over — hide bar completely
-  if (age >= windowMs + graceMs) return null;
+  // Active countdown
+  const remaining = windowMs - age;
+  const pct       = Math.max(0, Math.min(100, (remaining / windowMs) * 100));
+  const totalSec  = Math.max(0, Math.floor(remaining / 1000));
+  const mins      = Math.floor(totalSec / 60);
+  const secs      = totalSec % 60;
+  const timeStr   = `${mins}m ${secs.toString().padStart(2, '0')}s`;
 
-  // Format remaining time
-  const totalSec = Math.max(0, Math.floor(remaining / 1000));
-  const mins     = Math.floor(totalSec / 60);
-  const secs     = totalSec % 60;
-  const timeStr  = `${mins}m ${secs.toString().padStart(2, '0')}s`;
-
-  // Color shifts: green > 50%, amber 20-50%, red < 20%
   const barColor  = pct > 50 ? '#10b981' : pct > 20 ? '#f0b429' : '#ef4444';
   const textColor = pct > 50 ? 'text-emerald-400' : pct > 20 ? 'text-yellow-400' : 'text-red-400';
-  const bgColor   = pct > 50 ? 'bg-emerald-900/20 border-emerald-800/30' : pct > 20 ? 'bg-yellow-900/20 border-yellow-800/30' : 'bg-red-900/25 border-red-800/35';
+  const bgColor   = pct > 50
+    ? 'bg-emerald-900/20 border-emerald-800/30'
+    : pct > 20
+    ? 'bg-yellow-900/20 border-yellow-800/30'
+    : 'bg-red-900/25 border-red-800/35';
 
   return (
     <div className={`my-2 px-2 pt-1.5 pb-2 rounded-lg border ${bgColor}`}>
-      {/* Label row */}
       <div className="flex items-center justify-between mb-1.5">
         <span className={`text-[9px] font-bold uppercase tracking-widest ${textColor} font-mono`}>
           ⏳ Entry Window
@@ -97,37 +99,25 @@ function EntryCountdownBar({ createdAt, tp1Hit, entryWindowMinutes = 30 }) {
         </span>
       </div>
 
-      {/* Countdown bar */}
       <div className="relative h-1.5 bg-[#1e2d40] rounded-full overflow-hidden">
-        <div
-          style={{
-            width: `${pct}%`,
-            background: `linear-gradient(90deg, ${barColor}66, ${barColor})`,
-            boxShadow: `0 0 6px ${barColor}88`,
-            transition: 'width 1s linear, background 0.5s ease',
-            height: '100%',
-            borderRadius: '9999px',
-          }}
-        />
-        {/* Animated pulse at the leading edge */}
+        <div style={{
+          width: `${pct}%`,
+          background: `linear-gradient(90deg, ${barColor}66, ${barColor})`,
+          boxShadow: `0 0 6px ${barColor}88`,
+          transition: 'width 1s linear',
+          height: '100%',
+          borderRadius: '9999px',
+        }} />
         {pct > 2 && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: `${pct}%`,
-              transform: 'translateX(-50%)',
-              width: 3,
-              height: '100%',
-              background: barColor,
-              boxShadow: `0 0 8px ${barColor}`,
-              borderRadius: '9999px',
-            }}
-          />
+          <div style={{
+            position: 'absolute', top: 0, left: `${pct}%`,
+            transform: 'translateX(-50%)', width: 3, height: '100%',
+            background: barColor, boxShadow: `0 0 8px ${barColor}`,
+            borderRadius: '9999px',
+          }} />
         )}
       </div>
 
-      {/* Urgency hint when close to expiry */}
       {pct <= 20 && pct > 0 && (
         <div className="text-[8.5px] text-red-500 font-mono mt-1 text-center tracking-wide animate-pulse">
           ⚠ Price must confirm direction now or signal will be invalidated
