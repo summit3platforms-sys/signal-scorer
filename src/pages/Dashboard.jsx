@@ -18,7 +18,7 @@ import { useAuthStore } from '../store/authStore.js';
 import StatsBar from '../components/StatsBar.jsx';
 import RadarScanner from '../components/RadarScanner.jsx';
 import FilterBar from '../components/FilterBar.jsx';
-import SignalCard from '../components/SignalCard.jsx';
+import SignalCard, { getPinned, togglePinned, cleanPinned } from '../components/SignalCard.jsx';
 import LiveTicker from '../components/LiveTicker.jsx';
 import ScanCountdown from '../components/ScanCountdown.jsx';
 import HowScoringModal from '../components/HowScoringModal.jsx';
@@ -51,6 +51,8 @@ export default function Dashboard() {
   
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState('ACTIVE');
+  const [pinnedSymbols, setPinnedSymbols] = useState(getPinned());
+  const [showPinnedOnly, setShowPinnedOnly] = useState(false);
 
   useEffect(() => {
     initSocket();
@@ -105,7 +107,10 @@ export default function Dashboard() {
           {/* Right: Status Controls and Logout */}
           <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
             <div className="flex items-center gap-1.5">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-600'}`} />
+              <div className="live-dot-wrap" style={{ width: 8, height: 8 }}>
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-gray-600'}`} />
+                {isConnected && <><div className="ripple" /><div className="ripple ripple-2" /></>}
+              </div>
               <span className={`text-xs font-mono ${isConnected ? 'text-emerald-400' : 'text-gray-500'}`}>
                 {isConnected ? 'LIVE' : 'OFFLINE'}
               </span>
@@ -149,6 +154,8 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+        {/* Scanning beam */}
+        <div className="header-scan-beam w-full absolute bottom-0 left-0 right-0" style={{ position: 'relative' }} />
       </header>
 
       <main className="max-w-screen-2xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
@@ -248,6 +255,9 @@ export default function Dashboard() {
                 setFilter={setFilter}
                 total={signals.length}
                 showing={filteredSignals.length}
+                pinnedCount={pinnedSymbols.length}
+                showPinnedOnly={showPinnedOnly}
+                onTogglePinnedFilter={() => setShowPinnedOnly(p => !p)}
               />
 
               {scanStatus.isScanning && filteredSignals.length === 0 ? (
@@ -262,15 +272,26 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {filteredSignals.map((signal, i) => (
-                    <div key={signal.symbol} style={{ animationDelay: `${(i % 10) * 50}ms` }} className="animate-fadeSlide">
-                      <SignalCard
-                        signal={signal}
-                        livePrice={prices?.[signal.symbol]?.price}
-                        liveChange={prices?.[signal.symbol]?.change24h}
-                      />
-                    </div>
-                  ))}
+                  {(() => {
+                    const list = showPinnedOnly
+                      ? filteredSignals.filter(s => pinnedSymbols.includes(s.symbol))
+                      : [...filteredSignals].sort((a, b) => {
+                          const ap = pinnedSymbols.includes(a.symbol) ? 0 : 1;
+                          const bp = pinnedSymbols.includes(b.symbol) ? 0 : 1;
+                          return ap - bp;
+                        });
+                    return list.map((signal, i) => (
+                      <div key={signal.symbol} style={{ animationDelay: `${(i % 10) * 50}ms` }} className="animate-fadeSlide">
+                        <SignalCard
+                          signal={signal}
+                          livePrice={prices?.[signal.symbol]?.price}
+                          liveChange={prices?.[signal.symbol]?.change24h}
+                          isPinned={pinnedSymbols.includes(signal.symbol)}
+                          onTogglePin={(sym) => setPinnedSymbols(togglePinned(sym))}
+                        />
+                      </div>
+                    ));
+                  })()}
                 </div>
               )}
             </div>

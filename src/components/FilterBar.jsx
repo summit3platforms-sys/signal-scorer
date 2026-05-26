@@ -1,6 +1,6 @@
-import { Search, X } from 'lucide-react';
+import { Search, X, Pin } from 'lucide-react';
 
-export default function FilterBar({ filters, setFilter, total, showing }) {
+export default function FilterBar({ filters, setFilter, total, showing, pinnedCount, showPinnedOnly, onTogglePinnedFilter }) {
   const directions = ['ALL', 'LONG', 'SHORT'];
   const timeframes = ['5m', '15m', '1h', '4h'];
 
@@ -72,6 +72,21 @@ export default function FilterBar({ filters, setFilter, total, showing }) {
         />
         <span className="text-sm font-mono text-[#00d4aa] w-8 text-right flex-shrink-0">{filters.minScore}+</span>
       </div>
+
+      {/* Pinned filter */}
+      {pinnedCount > 0 && (
+        <button
+          onClick={onTogglePinnedFilter}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+            showPinnedOnly
+              ? 'bg-[#f0b429]/20 text-[#f0b429] border border-[#f0b429]/30'
+              : 'bg-[#0a0e17] text-gray-400 border border-[#1e2d40] hover:text-[#f0b429]'
+          }`}
+        >
+          <Pin size={11} className={showPinnedOnly ? 'fill-[#f0b429]' : ''} />
+          {pinnedCount} Pinned
+        </button>
+      )}
 
       {/* Count */}
       <div className="text-xs text-gray-500 whitespace-nowrap sm:ml-auto">
