@@ -1,5 +1,4 @@
 import { useAuthStore } from '../store/authStore.js';
-import { useSignalStore } from '../store/signalStore.js';
 import { useState, useEffect } from 'react';
 import { Send, CheckCircle, Clock, Star } from 'lucide-react';
 import ScoreRing from './ScoreRing.jsx';
@@ -267,6 +266,8 @@ export default function SignalCard({ signal, livePrice, liveChange, isPinned, on
   const isMaster = user?.role === 'master';
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+  // Entry window in minutes — matches server setting default
+  const entryWindowMinutes = 30;
 
   const price = livePrice ?? signal.entry;
   const change = liveChange ?? signal.priceChange ?? 0;
