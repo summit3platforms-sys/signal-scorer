@@ -304,6 +304,13 @@ export function updateSignalStatus(id, status, closedAt, maxProfitPct = 0) {
 export function getHistoricalStats() {
   const conn = getDB();
 
+  // Count invalidated signals (all-time health metric — separate query)
+  const invalidatedCount = conn.prepare(
+    `SELECT COUNT(*) as cnt FROM signals WHERE status = 'INVALIDATED'`
+  ).get()?.cnt ?? 0;
+
+  // Only WIN_TP1, WIN_TP2, LOSS_SL count toward win-rate accuracy.
+  // EXPIRED and INVALIDATED are excluded from all rate calculations.
   const row = conn.prepare(`
     SELECT
       COUNT(*) as total,
@@ -311,7 +318,7 @@ export function getHistoricalStats() {
       SUM(CASE WHEN status = 'LOSS_SL' THEN 1 ELSE 0 END) as losses,
       SUM(CASE WHEN tp1Hit = 1 THEN 1 ELSE 0 END) as tp1Touches
     FROM signals
-    WHERE status != 'ACTIVE'
+    WHERE status NOT IN ('ACTIVE', 'EXPIRED', 'INVALIDATED')
   `).get();
 
   if (!row || row.total === 0) {
