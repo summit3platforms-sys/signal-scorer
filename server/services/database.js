@@ -79,6 +79,9 @@ export function initDB() {
   try {
     db.exec(`ALTER TABLE signals ADD COLUMN tp1Hit INTEGER DEFAULT 0`);
   } catch (err) {}
+  try {
+    db.exec(`ALTER TABLE signals ADD COLUMN atr REAL`);
+  } catch (err) {}
 
   // Seed settings if missing
   const seedSettings = {
@@ -129,7 +132,14 @@ export function getDB() {
 export function getSettings() {
   const conn = getDB();
   const rows = conn.prepare(`SELECT * FROM settings`).all();
-  const settings = {};
+  // Hard defaults — returned when a key has never been saved to DB yet
+  const DEFAULTS = {
+    entryWindowMinutes: 30,
+    entryValidationAtr: 0.3,
+    softExpiryHours:    4,
+    hardExpiryHours:    8,
+  };
+  const settings = { ...DEFAULTS };
   // String-typed keys that must NOT be coerced to float
   const STRING_KEYS = new Set(['tronAddress']);
   for (const row of rows) {
@@ -203,7 +213,8 @@ export function insertSignals(signalsArray) {
         subScores: JSON.stringify(sig.subScores),
         historicalWinRate: sig.historicalWinRate ?? null,
         historicalSampleSize: sig.historicalSampleSize ?? null,
-        tp1Hit: 0
+        tp1Hit: 0,
+        atr: sig.atrWeighted ?? sig.atr ?? null,
       });
     }
   });
@@ -261,8 +272,25 @@ export function updateSignalStatus(id, status, closedAt, maxProfitPct = 0) {
         WHERE id = ?
       `).run(maxProfitPct, id);
     }
+  } else if (status === 'LOSS_SL') {
+    // TP1-hit guard: a signal that already hit TP1 can NEVER be a full loss.
+    // The SL was moved to breakeven, so record it as breakeven WIN_TP1 instead.
+    const sig = conn.prepare(`SELECT tp1Hit FROM signals WHERE id = ?`).get(id);
+    if (sig?.tp1Hit === 1) {
+      conn.prepare(`
+        UPDATE signals
+        SET status = 'WIN_TP1', closedAt = ?, maxProfitPct = 0
+        WHERE id = ?
+      `).run(closedAt, id);
+    } else {
+      conn.prepare(`
+        UPDATE signals
+        SET status = ?, closedAt = ?, maxProfitPct = ?
+        WHERE id = ?
+      `).run(status, closedAt, maxProfitPct, id);
+    }
   } else {
-    // WIN_TP2, LOSS_SL, EXPIRED — fully close the signal
+    // WIN_TP2, INVALIDATED, EXPIRED — fully close the signal
     conn.prepare(`
       UPDATE signals
       SET status = ?, closedAt = ?, maxProfitPct = ?
@@ -293,7 +321,8 @@ export function getHistoricalStats() {
       tp1TouchRate: 0,
       tp2HitRate: 0,
       stopLosses: 0,
-      expectancy: 0
+      expectancy: 0,
+      invalidatedCount,
     };
   }
 
@@ -308,7 +337,7 @@ export function getHistoricalStats() {
   const resolved = conn.prepare(`
     SELECT maxProfitPct 
     FROM signals 
-    WHERE status != 'ACTIVE'
+    WHERE status NOT IN ('ACTIVE', 'EXPIRED', 'INVALIDATED')
   `).all();
 
   let winCount = 0;
@@ -340,7 +369,8 @@ export function getHistoricalStats() {
     tp1TouchRate,
     tp2HitRate,
     stopLosses: row.losses,
-    expectancy
+    expectancy,
+    invalidatedCount,
   };
 }
 

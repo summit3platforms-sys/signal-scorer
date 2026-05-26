@@ -25,7 +25,12 @@ export default function SettingsTab() {
     leverage: 5,
     subscriptionPrice: 29,
     subscriptionDays: 30,
-    tronAddress: ''
+    tronAddress: '',
+    // Signal Lifecycle
+    entryWindowMinutes: 30,
+    entryValidationAtr: 0.3,
+    softExpiryHours: 4,
+    hardExpiryHours: 8,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -263,6 +268,62 @@ export default function SettingsTab() {
           </div>
         </div>
       </div>
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* ⏱ Signal Lifecycle                                                  */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      <div className="border border-[#1e2d40] rounded-xl p-4 sm:p-5 space-y-4">
+        <h3 className="text-base font-bold text-gray-300 border-b border-[#1e2d40] pb-2 flex items-center gap-2">
+          ⏱ Signal Lifecycle
+        </h3>
+        <p className="text-xs text-gray-500 -mt-1">
+          Controls when signals are validated, warned, or force-closed. Directly affects measured win rate accuracy.
+        </p>
+        <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+          <div className="flex justify-between mb-2">
+            <label className="text-sm font-medium text-gray-300">Entry Validation Window</label>
+            <span className="text-sm font-bold text-[#00d4aa]">{localSettings.entryWindowMinutes ?? 30} min</span>
+          </div>
+          <input type="range" min="5" max="120" step="5"
+            value={localSettings.entryWindowMinutes ?? 30}
+            onChange={(e) => handleChange('entryWindowMinutes', e.target.value)}
+            className="w-full accent-[#00d4aa]" />
+          <p className="text-xs text-gray-500 mt-2">If price has not confirmed direction within this window, the signal is invalidated and excluded from win rate.</p>
+        </div>
+        <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+          <div className="flex justify-between mb-2">
+            <label className="text-sm font-medium text-gray-300">Entry Confirmation Threshold</label>
+            <span className="text-sm font-bold text-[#00d4aa]">{(localSettings.entryValidationAtr ?? 0.3).toFixed(2)}x ATR</span>
+          </div>
+          <input type="range" min="0.1" max="1.0" step="0.05"
+            value={localSettings.entryValidationAtr ?? 0.3}
+            onChange={(e) => handleChange('entryValidationAtr', e.target.value)}
+            className="w-full accent-[#00d4aa]" />
+          <p className="text-xs text-gray-500 mt-2">Minimum price move toward TP required to confirm a valid entry. 0.3x ATR recommended.</p>
+        </div>
+        <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+          <div className="flex justify-between mb-2">
+            <label className="text-sm font-medium text-gray-300">Soft Expiry Warning</label>
+            <span className="text-sm font-bold text-yellow-400">{localSettings.softExpiryHours ?? 4} hrs</span>
+          </div>
+          <input type="range" min="1" max="12" step="1"
+            value={localSettings.softExpiryHours ?? 4}
+            onChange={(e) => handleChange('softExpiryHours', e.target.value)}
+            className="w-full accent-[#f0b429]" />
+          <p className="text-xs text-gray-500 mt-2">Signals older than this show an amber age warning on the dashboard. No DB write.</p>
+        </div>
+        <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
+          <div className="flex justify-between mb-2">
+            <label className="text-sm font-medium text-gray-300">Hard Expiry</label>
+            <span className="text-sm font-bold text-red-400">{localSettings.hardExpiryHours ?? 8} hrs</span>
+          </div>
+          <input type="range" min="2" max="24" step="1"
+            value={localSettings.hardExpiryHours ?? 8}
+            onChange={(e) => handleChange('hardExpiryHours', e.target.value)}
+            className="w-full accent-[#ef4444]" />
+          <p className="text-xs text-gray-500 mt-2">Signals older than this are force-closed as EXPIRED and excluded from win rate. Must be greater than Soft Expiry.</p>
+        </div>
+      </div>
+
 
       {/* ── Danger Zone ───────────────────────────────────────────────── */}
       <div className="border border-red-500/30 rounded-xl p-5 bg-red-500/5 mt-4">

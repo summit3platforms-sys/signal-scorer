@@ -21,7 +21,7 @@ function StatCard({ label, value, sub, color, Icon }) {
   );
 }
 
-export default function StatsBar({ stats, totalPairs, activeCount }) {
+export default function StatsBar({ stats, totalPairs, activeCount, isMaster }) {
   const expVal = stats?.expectancy ?? 0;
   const expectancyStr = expVal > 0 ? `+${expVal}%` : `${expVal}%`;
 
@@ -32,7 +32,16 @@ export default function StatsBar({ stats, totalPairs, activeCount }) {
       <StatCard label="Overall Accuracy" value={`${stats?.accuracy ?? 0}%`} sub="Weighted Win Rate" color="blue" Icon={Target} />
       <StatCard label="TP1 Hit Rate" value={`${stats?.tp1TouchRate ?? 0}%`} sub="hit rate TP1" color="green" Icon={Target} />
       <StatCard label="TP2 Hit Rate" value={`${stats?.tp2HitRate ?? 0}%`} sub="full target hit" color="yellow" Icon={Rocket} />
-      <StatCard label="Stop Losses" value={stats?.stopLosses ?? 0} sub="SL triggered" color="red" Icon={Shield} />
+      <StatCard
+        label="Stop Losses"
+        value={stats?.stopLosses ?? 0}
+        sub={isMaster && (stats?.invalidatedCount ?? 0) > 0
+          ? `SL triggered · ${stats.invalidatedCount} invalidated`
+          : 'SL triggered'
+        }
+        color="red"
+        Icon={Shield}
+      />
       <StatCard label="R Expectancy" value={expectancyStr} sub="avg profit / trade" color={expVal >= 0 ? 'green' : 'red'} Icon={TrendingUp} />
     </div>
   );

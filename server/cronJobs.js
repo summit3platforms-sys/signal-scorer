@@ -176,18 +176,51 @@ function processPriceUpdate(io, prices) {
     const now = Date.now();
     let statsChanged = false;
 
+    // ── Read settings once per tick — avoids SQLite hit inside the hot loop ──
+    const settings = getSettings();
+    const entryWindowMs  = (settings.entryWindowMinutes ?? 30) * 60 * 1000;
+    const softExpiryMs   = (settings.softExpiryHours    ?? 4)  * 60 * 60 * 1000;
+    const hardExpiryMs   = (settings.hardExpiryHours    ?? 8)  * 60 * 60 * 1000;
+    const entryGraceMs   = 5 * 60 * 1000; // 5-minute window to fire the check
+    const validationAtr  = settings.entryValidationAtr ?? 0.3;
+
     for (const sig of activeSignals) {
       const ticker = prices.get(sig.symbol);
       if (!ticker) continue;
       const livePrice = ticker.price;
+      const signalAge = now - sig.createdAt;
 
-      // Expire signals older than 24 hours
-      if (now - sig.createdAt > 24 * 60 * 60 * 1000) {
+      // ── Check A: Hard expiry (replaces old 24h check) ────────────────────
+      if (signalAge > hardExpiryMs) {
         updateSignalStatus(sig.id, 'EXPIRED', now, 0);
         statsChanged = true;
         continue;
       }
 
+      // ── Check B: Entry window validation (fires once between 30–35 min) ──
+      // Only applies to signals that haven't yet hit TP1 (still at risk of being fake)
+      if (
+        signalAge >= entryWindowMs &&
+        signalAge < entryWindowMs + entryGraceMs &&
+        sig.tp1Hit === 0
+      ) {
+        // Use stored ATR; fall back to TP1-distance estimate if missing
+        const atr = sig.atr || (Math.abs(sig.tp1 - sig.entry) / 2.5);
+        const requiredMove = atr * validationAtr;
+
+        const hasValidMove = sig.direction === 'LONG'
+          ? livePrice >= sig.entry + requiredMove
+          : livePrice <= sig.entry - requiredMove;
+
+        if (!hasValidMove) {
+          updateSignalStatus(sig.id, 'INVALIDATED', now, 0);
+          statsChanged = true;
+          console.log(`[Tracker] ${sig.symbol} INVALIDATED — no entry confirmation after ${settings.entryWindowMinutes ?? 30}min (required: ${requiredMove.toFixed(4)}, actual move: ${Math.abs(livePrice - sig.entry).toFixed(4)})`);
+          continue; // skip TP/SL checks for this signal
+        }
+      }
+
+      // ── TP / SL checks (unchanged) ────────────────────────────────────────
       if (sig.direction === 'LONG') {
         const profitPct = ((livePrice - sig.entry) / sig.entry) * 100;
 
@@ -232,6 +265,16 @@ function processPriceUpdate(io, prices) {
         const pricesObj = {};
         for (const [sym, ticker] of prices.entries()) {
           pricesObj[sym] = { price: ticker.price, change24h: ticker.change24h ?? 0 };
+        }
+        // Attach staleSince flag for signals past softExpiry (frontend amber pill)
+        // This is a computed field — no DB write
+        const staleSymbols = new Set(
+          activeSignals
+            .filter(s => (now - s.createdAt) >= softExpiryMs)
+            .map(s => s.symbol)
+        );
+        if (staleSymbols.size > 0) {
+          pricesObj['__stale__'] = [...staleSymbols];
         }
         io.emit('price:update', pricesObj);
         lastEmitTime = now2;

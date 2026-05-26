@@ -160,7 +160,7 @@ export default function Dashboard() {
 
       <main className="max-w-screen-2xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Stats Bar */}
-        <StatsBar stats={stats} totalPairs={scanStatus.totalPairs} activeCount={signals.length} />
+        <StatsBar stats={stats} totalPairs={scanStatus.totalPairs} activeCount={signals.length} isMaster={user?.role === 'master'} />
 
         {/* Live Ticker */}
         <LiveTicker signals={signals} prices={prices} />
