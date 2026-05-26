@@ -290,7 +290,14 @@ export const useSignalStore = create((set, get) => ({
     });
 
     socket.on('price:update', (priceMap) => {
-      set({ prices: priceMap || {} });
+      // Strip any non-price meta keys the server may have injected (e.g. __stale__)
+      const clean = {};
+      for (const [k, v] of Object.entries(priceMap || {})) {
+        if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+          clean[k] = v;
+        }
+      }
+      set({ prices: clean });
     });
 
     socket.on('scan:error', ({ error }) => {

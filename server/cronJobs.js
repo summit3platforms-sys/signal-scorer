@@ -266,16 +266,7 @@ function processPriceUpdate(io, prices) {
         for (const [sym, ticker] of prices.entries()) {
           pricesObj[sym] = { price: ticker.price, change24h: ticker.change24h ?? 0 };
         }
-        // Attach staleSince flag for signals past softExpiry (frontend amber pill)
-        // This is a computed field — no DB write
-        const staleSymbols = new Set(
-          activeSignals
-            .filter(s => (now - s.createdAt) >= softExpiryMs)
-            .map(s => s.symbol)
-        );
-        if (staleSymbols.size > 0) {
-          pricesObj['__stale__'] = [...staleSymbols];
-        }
+        // Staleness is computed client-side from signal.createdAt — no extra key needed
         io.emit('price:update', pricesObj);
         lastEmitTime = now2;
       }
