@@ -277,9 +277,11 @@ export function updateSignalStatus(id, status, closedAt, maxProfitPct = 0) {
     // The SL was moved to breakeven, so record it as breakeven WIN_TP1 instead.
     const sig = conn.prepare(`SELECT tp1Hit FROM signals WHERE id = ?`).get(id);
     if (sig?.tp1Hit === 1) {
+      // Preserve the TP1 profit that was recorded when price first touched TP1.
+      // Don't overwrite with 0 — the user pocketed partial profit at TP1.
       conn.prepare(`
         UPDATE signals
-        SET status = 'WIN_TP1', closedAt = ?, maxProfitPct = 0
+        SET status = 'WIN_TP1', closedAt = ?
         WHERE id = ?
       `).run(closedAt, id);
     } else {
