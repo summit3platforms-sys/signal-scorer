@@ -310,7 +310,8 @@ export function getHistoricalStats() {
   ).get()?.cnt ?? 0;
 
   // Only WIN_TP1, WIN_TP2, LOSS_SL count toward win-rate accuracy.
-  // EXPIRED and INVALIDATED are excluded from all rate calculations.
+  // EXPIRED and INVALIDATED are excluded. Window: last 7 days only.
+  const statsCutoff = Date.now() - (7 * 24 * 60 * 60 * 1000);
   const row = conn.prepare(`
     SELECT
       COUNT(*) as total,
@@ -319,7 +320,8 @@ export function getHistoricalStats() {
       SUM(CASE WHEN tp1Hit = 1 THEN 1 ELSE 0 END) as tp1Touches
     FROM signals
     WHERE status NOT IN ('ACTIVE', 'EXPIRED', 'INVALIDATED')
-  `).get();
+      AND createdAt >= ?
+  `).get(statsCutoff);
 
   if (!row || row.total === 0) {
     return {
@@ -333,8 +335,9 @@ export function getHistoricalStats() {
     };
   }
 
-  // Weighted Accuracy: TP2 = 1.0, TP1-only = 0.5, SL = 0.0
-  const score = (row.tp2Hits * 1.0) + ((row.tp1Touches - row.tp2Hits) * 0.5);
+  // Accuracy: TP1 or TP2 hit = WIN (1.0), SL = LOSS (0.0)
+  // TP1 is a profitable trade for the user — counts as a full win.
+  const score = row.tp1Touches * 1.0;
   const accuracy = Math.round((score / row.total) * 100);
 
   const tp1TouchRate = Math.round((row.tp1Touches / row.total) * 100);
@@ -345,7 +348,8 @@ export function getHistoricalStats() {
     SELECT maxProfitPct 
     FROM signals 
     WHERE status NOT IN ('ACTIVE', 'EXPIRED', 'INVALIDATED')
-  `).all();
+      AND createdAt >= ?
+  `).all(statsCutoff);
 
   let winCount = 0;
   let lossCount = 0;
