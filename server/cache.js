@@ -38,6 +38,8 @@ export function getSignals({ direction, minScore, limit = 200 } = {}) {
       subScores: JSON.parse(s.subScores || '{}'),
       regime: s.regime,
       timestamp: s.createdAt,
+      createdAt: s.createdAt,   // EntryCountdownBar reads this field
+      tp1Hit: s.tp1Hit ?? 0,    // EntryCountdownBar hides when TP1 already hit
       fromDb: true // flag to identify persistent signals
     };
   });
