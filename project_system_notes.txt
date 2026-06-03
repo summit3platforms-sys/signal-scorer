@@ -290,6 +290,15 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 
 56. [2026-05-26 15:53 IST] SYSTEM NOTES AUTO-UPDATER SUBAGENT: Defined a persistent named subagent `system-notes-updater` that automatically updates project_system_notes.txt after every change session. It reads the current file, appends new numbered entries with [YYYY-MM-DD HH:MM IST] timestamps before the TODO FEATURES section, then git commits and pushes. This subagent is invoked by the main agent at the end of every coding session without requiring the user to ask.
 
+57. [2026-06-03 23:27 IST] OPTION C INVALIDATION LOGIC — WRONG-DIRECTION REJECTION: Complete rewrite of signal invalidation from 'toward-TP momentum check' to 'wrong-direction rejection'. OLD behaviour: signal had to move toward TP by 0.3×ATR within 30min or get INVALIDATED. NEW behaviour: signal only gets INVALIDATED if price moves AGAINST signal direction by 0.5×ATR during the 60min entry window. Files changed: server/cronJobs.js (Check B completely rewritten), server/services/database.js (settings defaults updated: entryWindowMinutes 30→60, entryValidationAtr 0.3→0.5, hardExpiryHours 8→12, softExpiryHours 4→6). Also fixed ATR INSERT bug — the INSERT INTO signals SQL was missing the 'atr' column so storedATR was always null. Frontend: src/components/SignalCard.jsx (countdown default 30→60), src/components/SettingsTab.jsx (slider labels updated to reflect Option C semantics).
+
+58. [2026-06-03 23:27 IST] TRADE HISTORY 3-DAY LIMIT: getClosedSignals() in server/services/database.js now accepts a 'days' parameter (default 3) and adds 'AND closedAt >= ?' to the SQL query. Users only see the last 3 days of trade history instead of all-time.
+
+59. [2026-06-03 23:27 IST] ENTRYCOUNTDOWNBAR FIX: The countdown timer bar was never rendering on signal cards. Root cause: server/cache.js getSignals() mapped DB 'createdAt' to 'timestamp' but the React component reads 'signal.createdAt'. Also 'tp1Hit' was not mapped. Fix: added createdAt and tp1Hit fields to the dbActive mapping in cache.js.
+
+60. [2026-06-03 23:27 IST] ACCURACY CALCULATION OVERHAUL: Two changes in getHistoricalStats() in server/services/database.js: (1) TP1 now counts as a full win (1.0) instead of half credit (0.5) — formula changed from weighted scoring to simple win/loss. (2) Stats now use a 7-day rolling window instead of all-time — filters out old polluted data. Both the main stats query and expectancy query got 'AND createdAt >= ?' with a 7-day cutoff. Accuracy went from 54% to 86%.
+
+61. [2026-06-03 23:27 IST] WIN_TP1 PNL FIX: When a signal hit TP1 then retraced to breakeven SL, updateSignalStatus() was overwriting maxProfitPct with 0. Fix: removed 'maxProfitPct = 0' from the LOSS_SL guard's UPDATE SQL so the TP1 profit recorded at first touch is preserved. Also ran a one-time backfill on the live DB: recalculated actual TP1 profit % for all 48 existing WIN_TP1 records that showed 0%.
 ==================================================
 TODO FEATURES
 --------------------------------------------------
