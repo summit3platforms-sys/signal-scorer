@@ -381,14 +381,16 @@ export function getHistoricalStats() {
   };
 }
 
-export function getClosedSignals(limit = 100) {
+export function getClosedSignals(limit = 100, days = 3) {
   const conn = getDB();
+  // For users, restrict history to the last X days (default 3)
+  const cutoffMs = Date.now() - (days * 24 * 60 * 60 * 1000);
   return conn.prepare(`
     SELECT * FROM signals
-    WHERE status != 'ACTIVE'
+    WHERE status != 'ACTIVE' AND closedAt >= ?
     ORDER BY closedAt DESC
     LIMIT ?
-  `).all(limit);
+  `).all(cutoffMs, limit);
 }
 
 // ── Error Logging Operations ─────────────────────────────────────────────
