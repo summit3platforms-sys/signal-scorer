@@ -178,11 +178,10 @@ function processPriceUpdate(io, prices) {
 
     // ── Read settings once per tick — avoids SQLite hit inside the hot loop ──
     const settings = getSettings();
-    const entryWindowMs  = (settings.entryWindowMinutes ?? 30) * 60 * 1000;
-    const softExpiryMs   = (settings.softExpiryHours    ?? 4)  * 60 * 60 * 1000;
-    const hardExpiryMs   = (settings.hardExpiryHours    ?? 8)  * 60 * 60 * 1000;
-    const entryGraceMs   = 5 * 60 * 1000; // 5-minute window to fire the check
-    const validationAtr  = settings.entryValidationAtr ?? 0.3;
+    const entryWindowMs  = (settings.entryWindowMinutes ?? 60) * 60 * 1000;  // default 60min
+    const softExpiryMs   = (settings.softExpiryHours    ?? 6)  * 60 * 60 * 1000;
+    const hardExpiryMs   = (settings.hardExpiryHours    ?? 12) * 60 * 60 * 1000; // default 12h
+    const validationAtr  = settings.entryValidationAtr  ?? 0.5; // 0.5×ATR wrong-direction threshold
 
     for (const sig of activeSignals) {
       const ticker = prices.get(sig.symbol);
@@ -197,26 +196,26 @@ function processPriceUpdate(io, prices) {
         continue;
       }
 
-      // ── Check B: Entry window validation (fires once between 30–35 min) ──
-      // Only applies to signals that haven't yet hit TP1 (still at risk of being fake)
-      if (
-        signalAge >= entryWindowMs &&
-        signalAge < entryWindowMs + entryGraceMs &&
-        sig.tp1Hit === 0
-      ) {
-        // Use stored ATR; fall back to TP1-distance estimate if missing
+      // ── Check B: Wrong-direction invalidation (Option C) ────────────────
+      // During the entry window (first 60min), if price moves AGAINST the signal
+      // direction by more than 0.5×ATR → entry opportunity is gone → INVALIDATED.
+      // We do NOT require price to move toward TP — slow setups and consolidations
+      // are valid. We only kill the signal if it actively goes the wrong way.
+      if (signalAge < entryWindowMs && sig.tp1Hit === 0) {
+        // Use stored multi-timeframe ATR; fall back to TP1-distance heuristic
         const atr = sig.atr || (Math.abs(sig.tp1 - sig.entry) / 2.5);
-        const requiredMove = atr * validationAtr;
+        const invalidationThreshold = atr * validationAtr; // 0.5×ATR by default
 
-        const hasValidMove = sig.direction === 'LONG'
-          ? livePrice >= sig.entry + requiredMove
-          : livePrice <= sig.entry - requiredMove;
+        const wentWrongWay = sig.direction === 'LONG'
+          ? livePrice <= sig.entry - invalidationThreshold   // price fell too far below entry
+          : livePrice >= sig.entry + invalidationThreshold;  // price rose too far above entry
 
-        if (!hasValidMove) {
+        if (wentWrongWay) {
           updateSignalStatus(sig.id, 'INVALIDATED', now, 0);
           statsChanged = true;
-          console.log(`[Tracker] ${sig.symbol} INVALIDATED — no entry confirmation after ${settings.entryWindowMinutes ?? 30}min (required: ${requiredMove.toFixed(4)}, actual move: ${Math.abs(livePrice - sig.entry).toFixed(4)})`);
-          continue; // skip TP/SL checks for this signal
+          const move = Math.abs(livePrice - sig.entry).toFixed(4);
+          console.log(`[Tracker] ${sig.symbol} INVALIDATED — price moved ${sig.direction === 'LONG' ? 'below' : 'above'} entry by ${move} (threshold: ${invalidationThreshold.toFixed(4)}, ${Math.round(signalAge/60000)}min old)`);
+          continue;
         }
       }
 

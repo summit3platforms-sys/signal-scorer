@@ -134,10 +134,10 @@ export function getSettings() {
   const rows = conn.prepare(`SELECT * FROM settings`).all();
   // Hard defaults — returned when a key has never been saved to DB yet
   const DEFAULTS = {
-    entryWindowMinutes: 30,
-    entryValidationAtr: 0.3,
-    softExpiryHours:    4,
-    hardExpiryHours:    8,
+    entryWindowMinutes: 60,   // 60min entry window (was 30 — too tight for slow setups)
+    entryValidationAtr: 0.5,  // 0.5×ATR wrong-direction threshold (was 0.3 toward-TP)
+    softExpiryHours:    6,    // amber warning at 6h
+    hardExpiryHours:    12,   // hard close at 12h (was 8)
   };
   const settings = { ...DEFAULTS };
   // String-typed keys that must NOT be coerced to float
@@ -191,8 +191,8 @@ export function insertSignals(signalsArray) {
 
   const insert = conn.prepare(`
     INSERT OR REPLACE INTO signals 
-    (id, symbol, direction, score, confidence, entry, tp1, tp2, stopLoss, status, createdAt, reasons, subScores, historicalWinRate, historicalSampleSize, tp1Hit)
-    VALUES (@id, @symbol, @direction, @score, @confidence, @entry, @tp1, @tp2, @stopLoss, @status, @createdAt, @reasons, @subScores, @historicalWinRate, @historicalSampleSize, @tp1Hit)
+    (id, symbol, direction, score, confidence, entry, tp1, tp2, stopLoss, status, createdAt, reasons, subScores, historicalWinRate, historicalSampleSize, tp1Hit, atr)
+    VALUES (@id, @symbol, @direction, @score, @confidence, @entry, @tp1, @tp2, @stopLoss, @status, @createdAt, @reasons, @subScores, @historicalWinRate, @historicalSampleSize, @tp1Hit, @atr)
   `);
 
   const insertMany = conn.transaction((signals) => {

@@ -40,7 +40,7 @@ function Sparkline({ closes = [] }) {
 // Drains green→amber→red over entryWindowMinutes. Updates every second.
 // Shows "✓ Entry Confirmed" in the 5-min grace window after the check fires.
 // Disappears after grace window, or immediately if tp1Hit = 1.
-function EntryCountdownBar({ createdAt, tp1Hit, entryWindowMinutes = 30 }) {
+function EntryCountdownBar({ createdAt, tp1Hit, entryWindowMinutes = 60 }) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -266,8 +266,8 @@ export default function SignalCard({ signal, livePrice, liveChange, isPinned, on
   const isMaster = user?.role === 'master';
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
-  // Entry window in minutes — matches server setting default
-  const entryWindowMinutes = 30;
+  // Entry window in minutes — matches server setting default (Option C: 60min)
+  const entryWindowMinutes = 60;
 
   const price = livePrice ?? signal.entry;
   const change = liveChange ?? signal.priceChange ?? 0;
