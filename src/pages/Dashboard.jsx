@@ -53,6 +53,7 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState('ACTIVE');
   const [pinnedSymbols, setPinnedSymbols] = useState(getPinned());
+  const [scanError, setScanError] = useState(null);
 
   // Fix 15: Request notification permission on mount
   useEffect(() => {
