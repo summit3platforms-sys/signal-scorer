@@ -299,6 +299,42 @@ SYSTEM ARCHITECTURE & PRODUCTION STABILITY PATCHES (MAY 19, 2026)
 60. [2026-06-03 23:27 IST] ACCURACY CALCULATION OVERHAUL: Two changes in getHistoricalStats() in server/services/database.js: (1) TP1 now counts as a full win (1.0) instead of half credit (0.5) — formula changed from weighted scoring to simple win/loss. (2) Stats now use a 7-day rolling window instead of all-time — filters out old polluted data. Both the main stats query and expectancy query got 'AND createdAt >= ?' with a 7-day cutoff. Accuracy went from 54% to 86%.
 
 61. [2026-06-03 23:27 IST] WIN_TP1 PNL FIX: When a signal hit TP1 then retraced to breakeven SL, updateSignalStatus() was overwriting maxProfitPct with 0. Fix: removed 'maxProfitPct = 0' from the LOSS_SL guard's UPDATE SQL so the TP1 profit recorded at first touch is preserved. Also ran a one-time backfill on the live DB: recalculated actual TP1 profit % for all 48 existing WIN_TP1 records that showed 0%.
+62. [2026-06-04 08:00 IST] FULL APP AUDIT — 17 ISSUES FOUND AND FIXED: Conducted a full code and API audit of the entire app. Found and fixed 17 issues across frontend and backend.
+
+Fix 1: Telegram HTML escaping — EMA reason strings like '9>21>50>200' contained raw `>` characters that broke Telegram's HTML parse mode. Added `escHtml()` function in lib/telegram.js that escapes `&`, `<`, `>` before inserting reasons into the message template. Fixes 100% alert failure rate.
+
+Fix 2: Settings slider fallback defaults were stale — SettingsTab.jsx still had `?? 30`, `?? 0.3`, `?? 4`, `?? 8` for entry window, ATR threshold, soft expiry, and hard expiry. Updated to match actual DB defaults: 60, 0.5, 6, 12.
+
+Fix 3: Settings description text was wrong — tooltip said 'move toward TP required to confirm entry' but Option C logic invalidates on wrong-direction move. Updated both description texts in SettingsTab.jsx.
+
+Fix 4: Removed dead timeframe filter buttons (5m/15m/1h/4h) from FilterBar.jsx. The state was stored but `applyFilters()` never used it — completely non-functional. Removed buttons and the `timeframes` constant.
+
+Fix 5: StatsBar 'Overall Accuracy' card sub-label changed from 'Weighted Win Rate' to '7-Day Win Rate' to accurately reflect the current calculation (7-day rolling window, TP1=full win).
+
+Fix 6: Added `requireActiveUser` auth middleware to `GET /api/signals/history` route in server/routes/signals.js. Previously unauthenticated — anyone could read trade history.
+
+Fix 7: Telegram bot was not polling in production. The `bot.launch()` call was guarded by `if (process.env.NODE_ENV !== 'production')`, so on the live server none of the bot commands (/scan, /signals, /top) worked. Removed the guard — bot now always launches.
+
+Fix 8: `signal.regime` was always undefined because `regime` is not a column in the signals DB table. Cache.js now derives regime from `subScores.trend.vote`: 'LONG' → 'trending_up', 'SHORT' → 'trending_down', otherwise 'ranging'. This makes the colored left border on SignalCard work correctly.
+
+Fix 9: `historicalWinRate` and `historicalSampleSize` were stored in DB but not mapped in cache.js getSignals() DB→frontend mapping. Added both fields to the dbActive map so the win rate pill on signal cards now shows.
+
+Fix 10: Last scan timestamp was already displayed in the Dashboard header — confirmed working, no change needed.
+
+Fix 11: HistoryTable PNL prefix (+/-) was determined by `trade.status.startsWith('WIN')` instead of actual PNL value. Changed to use `pnlPct = trade.maxProfitPct ?? 0` and `pnlPrefix = pnlPct > 0 ? '+' : ''`.
+
+Fix 12: Trade history API had no pagination support. Added offset parameter to `getClosedSignals(limit, days, offset)` in database.js (SQL LIMIT/OFFSET + COUNT query for total). Updated route to accept `?limit=&offset=` and return `{history, total, limit, offset}`. Updated `fetchHistory(limit, offset)` in signalStore.js. Added `tradeHistoryTotal` to store state.
+
+Fix 13: Scan button had no error state. Added `scanError` useState in Dashboard.jsx. `handleRescan` is now async and catches errors, setting scanError message for 4 seconds.
+
+Fix 14: Saving settings didn't update the active signals list. `handleSave` in SettingsTab.jsx now calls `triggerScan()` after `updateSettings()` so the new minScore/thresholds apply immediately.
+
+Fix 15: No browser notifications when new signals fire. Added `Notification.requestPermission()` on Dashboard mount. In signalStore.js `signals:update` handler, new signals (not in previous set) now trigger `new Notification(symbol, {body: direction+score+entry})` if permission is granted.
+
+Fix 16: Countdown bar didn't show the ATR invalidation threshold. Added `atr`, `entry`, `direction` props to `EntryCountdownBar`. Bar now shows a small info row: 'Invalidates if price moves >X.XXXX against signal (0.5×ATR)'.
+
+Fix 17: Trade history table had no summary row. Added a summary footer div above pagination showing: Total trades, Wins (green), Losses (red), Avg PnL % (color-coded).
+
 ==================================================
 TODO FEATURES
 --------------------------------------------------
