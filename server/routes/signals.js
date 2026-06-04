@@ -1,5 +1,6 @@
 import express from 'express';
 import { getSignals } from '../cache.js';
+import { requireActiveUser } from '../middleware/auth.js';
 import { getClosedSignals, getDB } from '../services/database.js';
 
 const router = express.Router();
@@ -34,12 +35,13 @@ router.get('/', (req, res) => {
   res.json(data);
 });
 
-// GET /api/signals/history
-router.get('/history', (req, res) => {
-  const limit = req.query.limit ? parseInt(req.query.limit, 10) : 100;
+// GET /api/signals/history?limit=50&offset=0
+router.get('/history', requireActiveUser, (req, res) => {
+  const limit  = Math.min(parseInt(req.query.limit  ?? '50', 10), 200);
+  const offset = parseInt(req.query.offset ?? '0', 10);
   try {
-    const closed = getClosedSignals(limit);
-    res.json({ history: closed });
+    const { rows, total } = getClosedSignals(limit, 3, offset);
+    res.json({ history: rows, total, limit, offset });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch history', message: err.message });
   }

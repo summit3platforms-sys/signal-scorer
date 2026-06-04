@@ -40,7 +40,7 @@ function Sparkline({ closes = [] }) {
 // Drains green→amber→red over entryWindowMinutes. Updates every second.
 // Shows "✓ Entry Confirmed" in the 5-min grace window after the check fires.
 // Disappears after grace window, or immediately if tp1Hit = 1.
-function EntryCountdownBar({ createdAt, tp1Hit, entryWindowMinutes = 60 }) {
+function EntryCountdownBar({ createdAt, tp1Hit, entryWindowMinutes = 60, atr, entry, direction }) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -117,6 +117,13 @@ function EntryCountdownBar({ createdAt, tp1Hit, entryWindowMinutes = 60 }) {
         )}
       </div>
 
+      {/* Fix 16: Show ATR invalidation threshold */}
+      {atr && entry && (
+        <div className="text-[8px] text-gray-500 font-mono mt-1 flex justify-between">
+          <span>Invalidates if price moves &gt;{(atr * 0.5).toFixed(4)} against signal</span>
+          <span className="text-gray-600">0.5×ATR</span>
+        </div>
+      )}
       {pct <= 20 && pct > 0 && (
         <div className="text-[8.5px] text-red-500 font-mono mt-1 text-center tracking-wide animate-pulse">
           ⚠ Price must confirm direction now or signal will be invalidated
@@ -377,6 +384,9 @@ export default function SignalCard({ signal, livePrice, liveChange, isPinned, on
         createdAt={signal.createdAt}
         tp1Hit={signal.tp1Hit}
         entryWindowMinutes={entryWindowMinutes}
+        atr={signal.atr}
+        entry={signal.entry}
+        direction={signal.direction}
       />
 
       {/* Confidence & Action */}

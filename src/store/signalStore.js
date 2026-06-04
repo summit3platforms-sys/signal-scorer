@@ -23,6 +23,7 @@ export const useSignalStore = create((set, get) => ({
   signals: [],
   filteredSignals: [],
   tradeHistory: [],
+  tradeHistoryTotal: 0,
   systemNotes: '',
   stats: { totalSignals: 0, accuracy: 0, tp1TouchRate: 0, tp2HitRate: 0, stopLosses: 0, expectancy: 0 },
   filters: { direction: 'ALL', minScore: 60, timeframe: '15m', search: '' },
@@ -58,12 +59,15 @@ export const useSignalStore = create((set, get) => ({
     }
   },
 
-  fetchHistory: async () => {
+  fetchHistory: async (limit = 50, offset = 0) => {
     try {
-      const res = await fetch('/api/signals/history');
+      const res = await fetch(`/api/signals/history?limit=${limit}&offset=${offset}`);
       if (res.ok) {
         const data = await res.json();
-        set({ tradeHistory: data.history });
+        set({ 
+          tradeHistory: data.history,
+          tradeHistoryTotal: data.total ?? data.history.length,
+        });
       }
     } catch (err) {
       console.error('[Store] Failed to fetch history:', err);
@@ -209,6 +213,7 @@ export const useSignalStore = create((set, get) => ({
           signals: [],
           filteredSignals: [],
           tradeHistory: [],
+  tradeHistoryTotal: 0,
           errorLogs: [],
           scannerLogs: [],
           stats: { totalSignals: 0, accuracy: 0, tp1TouchRate: 0, tp2HitRate: 0, stopLosses: 0, expectancy: 0 }
@@ -257,6 +262,17 @@ export const useSignalStore = create((set, get) => ({
     socket.on('signals:update', ({ signals, scannedAt, totalPairs, stats, meta }) => {
       const filters = get().filters;
       const filtered = applyFilters(signals || [], filters);
+      // Fix 15: fire browser notification if new signals appeared
+      const prevSymbols = new Set(get().signals.map(s => s.symbol));
+      const newSignals = (signals || []).filter(s => !prevSymbols.has(s.symbol));
+      if (newSignals.length > 0 && 'Notification' in window && Notification.permission === 'granted') {
+        const s = newSignals[0];
+        new Notification(`⚡ New Signal: ${s.symbol}`, {
+          body: `${s.direction} | Score ${s.score} | Entry $${s.entry}`,
+          icon: '/favicon.svg',
+          tag: `signal-${s.symbol}`,
+        });
+      }
       set(state => ({
         signals: signals || [],
         filteredSignals: filtered,

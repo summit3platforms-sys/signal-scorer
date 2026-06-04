@@ -2,7 +2,6 @@ import { Search, X } from 'lucide-react';
 
 export default function FilterBar({ filters, setFilter, total, showing }) {
   const directions = ['ALL', 'LONG', 'SHORT'];
-  const timeframes = ['5m', '15m', '1h', '4h'];
 
   return (
     <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 bg-[#0f1923] border border-[#1e2d40] rounded-xl px-3 sm:px-4 py-3">
@@ -46,19 +45,6 @@ export default function FilterBar({ filters, setFilter, total, showing }) {
           ))}
         </div>
 
-        <div className="flex gap-1 bg-[#0a0e17] rounded-lg p-1">
-          {timeframes.map(t => (
-            <button
-              key={t}
-              onClick={() => setFilter('timeframe', t)}
-              className={`px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-mono transition-all duration-150 ${
-                filters.timeframe === t ? 'bg-[#1e2d40] text-[#00d4aa]' : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Min Score Slider */}

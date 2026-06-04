@@ -54,7 +54,11 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('ACTIVE');
   const [pinnedSymbols, setPinnedSymbols] = useState(getPinned());
 
+  // Fix 15: Request notification permission on mount
   useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
     initSocket();
   }, []);
 
@@ -132,6 +136,7 @@ export default function Dashboard() {
             <button
               onClick={handleRescan}
               disabled={scanStatus.isScanning}
+              title={scanError ?? ''}
               className="flex items-center gap-1.5 text-xs sm:text-sm border border-[#00d4aa] text-[#00d4aa] px-2 sm:px-3 py-1.5 rounded-lg hover:bg-[#00d4aa]/10 transition-all disabled:opacity-50"
             >
               <RefreshCw size={14} className={scanStatus.isScanning ? 'animate-spin' : ''} />

@@ -38,8 +38,22 @@ export function getSignals({ direction, minScore, limit = 200 } = {}) {
       subScores: JSON.parse(s.subScores || '{}'),
       regime: s.regime,
       timestamp: s.createdAt,
-      createdAt: s.createdAt,   // EntryCountdownBar reads this field
-      tp1Hit: s.tp1Hit ?? 0,    // EntryCountdownBar hides when TP1 already hit
+      createdAt: s.createdAt,            // EntryCountdownBar reads this field
+      tp1Hit: s.tp1Hit ?? 0,             // EntryCountdownBar hides when TP1 already hit
+      historicalWinRate: s.historicalWinRate ?? null,   // Fix 9: show symbol win rate pill
+      historicalSampleSize: s.historicalSampleSize ?? null,
+      // Fix 8: regime is not in DB schema — derive from direction/subScores for border colour
+      regime: s.subScores
+        ? (() => {
+            try {
+              const ss = typeof s.subScores === 'string' ? JSON.parse(s.subScores) : s.subScores;
+              const trendVote = ss?.trend?.vote;
+              if (trendVote === 'LONG') return 'trending_up';
+              if (trendVote === 'SHORT') return 'trending_down';
+              return 'ranging';
+            } catch { return null; }
+          })()
+        : null,
       fromDb: true // flag to identify persistent signals
     };
   });

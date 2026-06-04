@@ -387,16 +387,21 @@ export function getHistoricalStats() {
   };
 }
 
-export function getClosedSignals(limit = 100, days = 3) {
+export function getClosedSignals(limit = 100, days = 3, offset = 0) {
   const conn = getDB();
-  // For users, restrict history to the last X days (default 3)
+  // Restrict history to last X days; support pagination via offset
   const cutoffMs = Date.now() - (days * 24 * 60 * 60 * 1000);
-  return conn.prepare(`
+  const rows = conn.prepare(`
     SELECT * FROM signals
     WHERE status != 'ACTIVE' AND closedAt >= ?
     ORDER BY closedAt DESC
-    LIMIT ?
-  `).all(cutoffMs, limit);
+    LIMIT ? OFFSET ?
+  `).all(cutoffMs, limit, offset);
+  const totalRow = conn.prepare(`
+    SELECT COUNT(*) as total FROM signals
+    WHERE status != 'ACTIVE' AND closedAt >= ?
+  `).get(cutoffMs);
+  return { rows, total: totalRow?.total ?? 0 };
 }
 
 // ── Error Logging Operations ─────────────────────────────────────────────

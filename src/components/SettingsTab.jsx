@@ -4,7 +4,7 @@ import { useSignalStore } from '../store/signalStore.js';
 import { useAuthStore } from '../store/authStore.js';
 
 export default function SettingsTab() {
-  const { engineSettings, fetchSettings, updateSettings, purgeAllData } = useSignalStore();
+  const { engineSettings, fetchSettings, updateSettings, purgeAllData, triggerScan } = useSignalStore();
   const currentUser = useAuthStore((state) => state.user);
   const isMaster = currentUser?.role === 'master';
   
@@ -58,6 +58,8 @@ export default function SettingsTab() {
     setIsSaving(false);
     setSavedMsg(true);
     setTimeout(() => setSavedMsg(false), 3000);
+    // Fix 14: trigger re-scan so updated minScore/thresholds apply immediately
+    triggerScan();
   };
 
   const handlePurge = async () => {
@@ -149,7 +151,7 @@ export default function SettingsTab() {
           <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
             <div className="flex justify-between mb-2">
               <label className="text-sm font-medium text-gray-300">Signal Cooldown Period</label>
-              <span className="text-sm font-bold text-[#00d4aa]">{localSettings.cooldownMinutes ?? 30} mins</span>
+              <span className="text-sm font-bold text-[#00d4aa]">{localSettings.cooldownMinutes ?? 60} mins</span>
             </div>
             <input
               type="range"
@@ -281,32 +283,32 @@ export default function SettingsTab() {
         <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
           <div className="flex justify-between mb-2">
             <label className="text-sm font-medium text-gray-300">Entry Validation Window</label>
-            <span className="text-sm font-bold text-[#00d4aa]">{localSettings.entryWindowMinutes ?? 30} min</span>
+            <span className="text-sm font-bold text-[#00d4aa]">{localSettings.entryWindowMinutes ?? 60} min</span>
           </div>
           <input type="range" min="5" max="120" step="5"
-            value={localSettings.entryWindowMinutes ?? 30}
+            value={localSettings.entryWindowMinutes ?? 60}
             onChange={(e) => handleChange('entryWindowMinutes', e.target.value)}
             className="w-full accent-[#00d4aa]" />
-          <p className="text-xs text-gray-500 mt-2">If price has not confirmed direction within this window, the signal is invalidated and excluded from win rate.</p>
+          <p className="text-xs text-gray-500 mt-2">During this window, if price moves against the signal direction by more than the threshold below, the signal is invalidated.</p>
         </div>
         <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
           <div className="flex justify-between mb-2">
             <label className="text-sm font-medium text-gray-300">Entry Confirmation Threshold</label>
-            <span className="text-sm font-bold text-[#00d4aa]">{(localSettings.entryValidationAtr ?? 0.3).toFixed(2)}x ATR</span>
+            <span className="text-sm font-bold text-[#00d4aa]">{(localSettings.entryValidationAtr ?? 0.5).toFixed(2)}x ATR</span>
           </div>
           <input type="range" min="0.1" max="1.0" step="0.05"
-            value={localSettings.entryValidationAtr ?? 0.3}
+            value={localSettings.entryValidationAtr ?? 0.5}
             onChange={(e) => handleChange('entryValidationAtr', e.target.value)}
             className="w-full accent-[#00d4aa]" />
-          <p className="text-xs text-gray-500 mt-2">Minimum price move toward TP required to confirm a valid entry. 0.3x ATR recommended.</p>
+          <p className="text-xs text-gray-500 mt-2">If price moves AGAINST signal direction by this much (× ATR), the signal is invalidated. 0.5× recommended.</p>
         </div>
         <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
           <div className="flex justify-between mb-2">
             <label className="text-sm font-medium text-gray-300">Soft Expiry Warning</label>
-            <span className="text-sm font-bold text-yellow-400">{localSettings.softExpiryHours ?? 4} hrs</span>
+            <span className="text-sm font-bold text-yellow-400">{localSettings.softExpiryHours ?? 6} hrs</span>
           </div>
           <input type="range" min="1" max="12" step="1"
-            value={localSettings.softExpiryHours ?? 4}
+            value={localSettings.softExpiryHours ?? 6}
             onChange={(e) => handleChange('softExpiryHours', e.target.value)}
             className="w-full accent-[#f0b429]" />
           <p className="text-xs text-gray-500 mt-2">Signals older than this show an amber age warning on the dashboard. No DB write.</p>
@@ -314,10 +316,10 @@ export default function SettingsTab() {
         <div className="bg-[#1e2d40]/40 p-4 rounded-lg border border-[#1e2d40]">
           <div className="flex justify-between mb-2">
             <label className="text-sm font-medium text-gray-300">Hard Expiry</label>
-            <span className="text-sm font-bold text-red-400">{localSettings.hardExpiryHours ?? 8} hrs</span>
+            <span className="text-sm font-bold text-red-400">{localSettings.hardExpiryHours ?? 12} hrs</span>
           </div>
           <input type="range" min="2" max="24" step="1"
-            value={localSettings.hardExpiryHours ?? 8}
+            value={localSettings.hardExpiryHours ?? 12}
             onChange={(e) => handleChange('hardExpiryHours', e.target.value)}
             className="w-full accent-[#ef4444]" />
           <p className="text-xs text-gray-500 mt-2">Signals older than this are force-closed as EXPIRED and excluded from win rate. Must be greater than Soft Expiry.</p>

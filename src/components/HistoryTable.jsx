@@ -49,6 +49,13 @@ export default function HistoryTable({ history }) {
     return p < 1 ? p.toFixed(4) : p < 100 ? p.toFixed(3) : p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
+  // Summary stats for footer
+  const wins   = history.filter(t => t.status.startsWith('WIN')).length;
+  const losses = history.filter(t => t.status === 'LOSS_SL').length;
+  const avgPnl = history.length > 0
+    ? (history.reduce((s, t) => s + (t.maxProfitPct ?? 0), 0) / history.length)
+    : 0;
+
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedHistory = history.slice(startIndex, startIndex + itemsPerPage);
 
@@ -82,7 +89,8 @@ export default function HistoryTable({ history }) {
               const isWin = trade.status.startsWith('WIN');
               const isLoss = trade.status === 'LOSS_SL';
               const pnlColor = isWin ? 'text-emerald-400' : isLoss ? 'text-red-400' : 'text-gray-400';
-              const pnlPrefix = isWin ? '+' : '';
+              const pnlPct = trade.maxProfitPct ?? 0;
+              const pnlPrefix = pnlPct > 0 ? '+' : '';
               return (
                 <tr key={trade.id} className="hover:bg-[#1e2d40]/20 transition-colors">
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs">{formatDate(trade.closedAt || trade.createdAt)}</td>
@@ -94,7 +102,7 @@ export default function HistoryTable({ history }) {
                   </td>
                   <td className="px-4 py-3">{getStatusBadge(trade.status)}</td>
                   <td className="px-4 py-3 font-mono text-gray-300">${formatPrice(trade.entry)}</td>
-                  <td className={`px-4 py-3 text-right font-mono font-bold ${pnlColor}`}>{pnlPrefix}{trade.maxProfitPct ? trade.maxProfitPct.toFixed(2) : '0.00'}%</td>
+                  <td className={`px-4 py-3 text-right font-mono font-bold ${pnlColor}`}>{pnlPrefix}{pnlPct.toFixed(2)}%</td>
                 </tr>
               );
             })}
@@ -108,7 +116,8 @@ export default function HistoryTable({ history }) {
           const isWin = trade.status.startsWith('WIN');
           const isLoss = trade.status === 'LOSS_SL';
           const pnlColor = isWin ? 'text-emerald-400' : isLoss ? 'text-red-400' : 'text-gray-400';
-          const pnlPrefix = isWin ? '+' : '';
+          const pnlPct = trade.maxProfitPct ?? 0;
+              const pnlPrefix = pnlPct > 0 ? '+' : '';
           return (
             <div key={trade.id} className="px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex-1 min-w-0">
@@ -120,12 +129,22 @@ export default function HistoryTable({ history }) {
               </div>
               <div className="flex flex-col items-end gap-1">
                 {getStatusBadge(trade.status)}
-                <span className={`text-sm font-mono font-bold ${pnlColor}`}>{pnlPrefix}{trade.maxProfitPct ? trade.maxProfitPct.toFixed(2) : '0.00'}%</span>
+                <span className={`text-sm font-mono font-bold ${pnlColor}`}>{pnlPrefix}{pnlPct.toFixed(2)}%</span>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Summary Footer */}
+      {history.length > 0 && (
+        <div className="border-t border-[#1e2d40] px-4 sm:px-6 py-2 bg-[#0a0e17] flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500">
+          <span>Total: <span className="text-white font-mono font-bold">{history.length}</span> trades</span>
+          <span>Wins: <span className="text-emerald-400 font-mono font-bold">{wins}</span></span>
+          <span>Losses: <span className="text-red-400 font-mono font-bold">{losses}</span></span>
+          <span>Avg PnL: <span className={`font-mono font-bold ${avgPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{avgPnl >= 0 ? '+' : ''}{avgPnl.toFixed(2)}%</span></span>
+        </div>
+      )}
 
       {/* Pagination Footer */}
       {totalPages > 1 && (
