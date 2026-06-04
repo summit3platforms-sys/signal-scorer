@@ -56,9 +56,7 @@ export default function SettingsTab() {
     setIsSaving(true);
     await updateSettings(localSettings);
     setIsSaving(false);
-    setSavedMsg(true);
-    setTimeout(() => setSavedMsg(false), 3000);
-    // Fix 14: trigger re-scan so updated minScore/thresholds apply immediately
+    toast.success('Settings saved successfully');
     triggerScan();
   };
 
@@ -328,7 +326,7 @@ export default function SettingsTab() {
 
 
       {/* ── Danger Zone ───────────────────────────────────────────────── */}
-      <div className="border border-red-500/30 rounded-xl p-5 bg-red-500/5 mt-4">
+      <div className="border border-red-500/30 rounded-xl p-5 bg-red-500/5 mt-4 relative overflow-hidden">
         <h3 className="text-lg font-bold text-red-400 flex items-center gap-2 mb-3">
           <AlertTriangle size={20} /> Danger Zone
         </h3>
@@ -337,26 +335,44 @@ export default function SettingsTab() {
           Engine settings (weights &amp; thresholds) will be preserved. This action cannot be undone.
         </p>
         <button
-          onClick={handlePurge}
-          disabled={isPurging}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
-            confirmPurge
-              ? 'bg-red-600 text-white hover:bg-red-700 ring-2 ring-red-400 animate-pulse'
-              : purgedMsg
-              ? 'bg-emerald-600 text-white'
-              : 'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          onClick={() => setConfirmPurge(true)}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold transition-all duration-200 bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30"
         >
-          {isPurging ? (
-            <><RefreshCw className="animate-spin" size={16} /> Purging...</>
-          ) : purgedMsg ? (
-            <><CheckCircle size={16} /> All Data Purged!</>
-          ) : confirmPurge ? (
-            <><Trash2 size={16} /> Click Again to Confirm — This is Irreversible</>
-          ) : (
-            <><Trash2 size={16} /> Purge All Data</>
-          )}
+          <Trash2 size={16} /> Purge All Data
         </button>
+        
+        {confirmPurge && (
+          <div className="absolute inset-0 bg-[#0f1923]/95 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-6 text-center animate-fadeSlide border border-red-500/50 rounded-xl">
+            <button onClick={() => setConfirmPurge(false)} className="absolute top-3 right-3 text-gray-400 hover:text-white">
+              <X size={20} />
+            </button>
+            <AlertTriangle size={32} className="text-red-500 mb-2 animate-pulse" />
+            <h4 className="text-lg font-bold text-white mb-1">Are you absolutely sure?</h4>
+            <p className="text-sm text-gray-400 mb-4">This will permanently delete all trade history and active signals.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmPurge(false)}
+                className="px-4 py-2 rounded-lg font-bold bg-[#1e2d40] text-white hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setIsPurging(true);
+                  const success = await purgeAllData();
+                  setIsPurging(false);
+                  setConfirmPurge(false);
+                  if (success) toast.success('All data purged successfully');
+                }}
+                disabled={isPurging}
+                className="px-4 py-2 rounded-lg font-bold bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-2"
+              >
+                {isPurging ? <RefreshCw className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                Yes, Purge Everything
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Subscription & Payment Settings (Master only) ──────────────── */}

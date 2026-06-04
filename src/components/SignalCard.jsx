@@ -268,11 +268,23 @@ export function cleanPinned(activeSymbols) {
 }
 
 // ── Main SignalCard ───────────────────────────────────────────────────────────
+import { useRef } from 'react';
 export default function SignalCard({ signal, livePrice, liveChange, isPinned, onTogglePin }) {
   const user = useAuthStore((state) => state.user);
   const isMaster = user?.role === 'master';
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+  const [pulseClass, setPulseClass] = useState('');
+  const prevPriceRef = useRef(livePrice);
+
+  useEffect(() => {
+    if (livePrice && prevPriceRef.current && livePrice !== prevPriceRef.current) {
+      setPulseClass(livePrice > prevPriceRef.current ? 'price-pulse-up' : 'price-pulse-down');
+      const t = setTimeout(() => setPulseClass(''), 1000);
+      return () => clearTimeout(t);
+    }
+    prevPriceRef.current = livePrice;
+  }, [livePrice]);
   // Entry window in minutes — matches server setting default (Option C: 60min)
   const entryWindowMinutes = 60;
 

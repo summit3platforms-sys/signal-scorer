@@ -23,6 +23,22 @@
   .animate-ticker {
     animation: ticker 40s linear infinite;
   }
+
+  .price-pulse-up {
+    animation: pulseUp 1s ease-out;
+  }
+  .price-pulse-down {
+    animation: pulseDown 1s ease-out;
+  }
+}
+
+@keyframes pulseUp {
+  0% { color: #00d4aa; text-shadow: 0 0 10px rgba(0,212,170,0.8); }
+  100% { color: white; text-shadow: none; }
+}
+@keyframes pulseDown {
+  0% { color: #ef4444; text-shadow: 0 0 10px rgba(239,68,68,0.8); }
+  100% { color: white; text-shadow: none; }
 }
 
 @keyframes fadeSlide {

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { 
   RefreshCw, 
@@ -285,10 +287,20 @@ export default function Dashboard() {
                   <p className="text-gray-500 text-sm">Scanning {scanStatus.totalPairs || '—'} pairs…</p>
                 </div>
               ) : filteredSignals.length === 0 ? (
-                <div className="text-center py-24 text-gray-600">
-                  <p className="text-lg">No signals match the current filters.</p>
-                  <p className="text-sm mt-2">Try lowering the minimum score or changing the direction filter.</p>
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} 
+                  className="flex flex-col items-center justify-center py-32 text-center"
+                >
+                  <div className="relative mb-6">
+                    <div className="absolute inset-0 bg-[#00d4aa] blur-3xl opacity-10 rounded-full"></div>
+                    <Activity size={64} className="text-[#1e2d40] relative z-10" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-[#1e2d40] rounded-full animate-ping opacity-20"></div>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-300 mb-2">No signals found</h3>
+                  <p className="text-sm text-gray-500 max-w-sm">
+                    The engine is scanning 24/7. Adjust your filters or wait for a new confluence event to occur.
+                  </p>
+                </motion.div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(() => {
