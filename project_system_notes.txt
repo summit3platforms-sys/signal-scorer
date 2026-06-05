@@ -1,6 +1,6 @@
 ==================================================
 PROJECT: Signal Scorer Pro
-LAST UPDATED: 2026-06-04 14:20:54 IST
+LAST UPDATED: 2026-06-05 14:20:43 IST
 ==================================================
 
 CURRENT TECH STACK
@@ -340,6 +340,8 @@ Fix 17: Trade history table had no summary row. Added a summary footer div above
 - Empty States: Dashboard.jsx now features an animated SVG Activity radar graphic when 0 signals are found, rather than plain text.
 - Micro-Animations: SignalCard list in Dashboard is now wrapped in `<AnimatePresence>` causing cards to smoothly pop in and blur out when the list filters update. Added a "Live Pulse" CSS animation in `index.css` applied via `useEffect` in SignalCard.jsx that briefly flashes the livePrice text green/red when it updates via WebSocket.
 - Danger Zone Guardrails: Upgraded the "Purge All Data" button in SettingsTab.jsx from a double-click UI to a proper full-screen blurred backdrop confirmation modal to prevent accidental deletion.
+
+64. [2026-06-05 14:15 IST] RESTRICTED MANUAL RESCAN TO MASTER ROLE: Modified the header in `Dashboard.jsx`. Regular users no longer see the clickable "Rescan Now" button. Instead, they see a non-interactive text pill stating "Auto-scans every 5 min" (with a shortened "Auto 5m" version for mobile). The clickable scan button remains available for the `master` role.
 
 ==================================================
 TODO FEATURES
