@@ -136,15 +136,27 @@ export default function Dashboard() {
 
             <ScanCountdown countdown={scanStatus.countdown} isScanning={scanStatus.isScanning} />
 
-            <button
-              onClick={handleRescan}
-              disabled={scanStatus.isScanning}
-              title={scanError ?? ''}
-              className="flex items-center gap-1.5 text-xs sm:text-sm border border-[#00d4aa] text-[#00d4aa] px-2 sm:px-3 py-1.5 rounded-lg hover:bg-[#00d4aa]/10 transition-all disabled:opacity-50"
-            >
-              <RefreshCw size={14} className={scanStatus.isScanning ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">{scanStatus.isScanning ? 'Scanning…' : 'Rescan Now'}</span><span className="sm:hidden">{scanStatus.isScanning ? '…' : 'Scan'}</span>
-            </button>
+            {user?.role === 'master' ? (
+              <button
+                onClick={handleRescan}
+                disabled={scanStatus.isScanning}
+                title={scanError ?? ''}
+                className="flex items-center gap-1.5 text-xs sm:text-sm border border-[#00d4aa] text-[#00d4aa] px-2 sm:px-3 py-1.5 rounded-lg hover:bg-[#00d4aa]/10 transition-all disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={scanStatus.isScanning ? 'animate-spin' : ''} />
+                <span className="hidden sm:inline">{scanStatus.isScanning ? 'Scanning…' : 'Rescan Now'}</span>
+                <span className="sm:hidden">{scanStatus.isScanning ? '…' : 'Scan'}</span>
+              </button>
+            ) : (
+              <div
+                className="flex items-center gap-1.5 text-xs sm:text-sm border border-gray-600 text-gray-400 px-2 sm:px-3 py-1.5 rounded-lg cursor-default select-none"
+                title="The engine automatically scans the market every 5 minutes"
+              >
+                <RefreshCw size={14} className={scanStatus.isScanning ? 'animate-spin text-[#00d4aa]' : ''} />
+                <span className="hidden sm:inline">Auto-scans every 5 min</span>
+                <span className="sm:hidden">Auto 5m</span>
+              </div>
+            )}
 
             <button onClick={() => setShowModal(true)} className="text-gray-500 hover:text-white transition-colors">
               <HelpCircle size={18} />
