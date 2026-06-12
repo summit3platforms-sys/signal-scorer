@@ -1,6 +1,6 @@
 ==================================================
 PROJECT: Signal Scorer Pro
-LAST UPDATED: 2026-06-05 14:20:43 IST
+LAST UPDATED: 2026-06-12 18:30:00 IST
 ==================================================
 
 CURRENT TECH STACK
@@ -342,6 +342,11 @@ Fix 17: Trade history table had no summary row. Added a summary footer div above
 - Danger Zone Guardrails: Upgraded the "Purge All Data" button in SettingsTab.jsx from a double-click UI to a proper full-screen blurred backdrop confirmation modal to prevent accidental deletion.
 
 64. [2026-06-05 14:15 IST] RESTRICTED MANUAL RESCAN TO MASTER ROLE: Modified the header in `Dashboard.jsx`. Regular users no longer see the clickable "Rescan Now" button. Instead, they see a non-interactive text pill stating "Auto-scans every 5 min" (with a shortened "Auto 5m" version for mobile). The clickable scan button remains available for the `master` role.
+
+65. [2026-06-12 18:25 IST] DASHBOARD SPLIT — PRIME ENTRIES vs MONITORING (Idea A): Modified the Active Signals tab in src/pages/Dashboard.jsx. Instead of one flat grid, signals are now split into two distinct sections:
+(1) '🔥 Prime Entries' — signals whose createdAt is within the last 60 minutes AND tp1Hit is false. Shown first with a pulsing green dot, emerald header, and 'entry window open' label. These are the actionable, fresh trades users should focus on.
+(2) '👀 Monitoring' — signals older than 60 minutes or that have already hit TP1. Shown below with grey header, 80% opacity, and a note: 'Entry window has closed — monitor for TP targets, do not enter new positions.'
+Logic runs entirely on the frontend using Date.now() vs signal.createdAt. Pinned signals still sort to the top within each section. Sorting within sections is score descending.
 
 ==================================================
 TODO FEATURES
