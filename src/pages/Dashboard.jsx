@@ -314,26 +314,90 @@ export default function Dashboard() {
                   </p>
                 </motion.div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {(() => {
-                    const list = [...filteredSignals].sort((a, b) => {
-                          const ap = pinnedSymbols.includes(a.symbol) ? 0 : 1;
-                          const bp = pinnedSymbols.includes(b.symbol) ? 0 : 1;
-                          return ap - bp;
-                        });
-                    return list.map((signal, i) => (
-                      <div key={signal.symbol} style={{ animationDelay: `${(i % 10) * 50}ms` }} className="animate-fadeSlide">
-                        <SignalCard
-                          signal={signal}
-                          livePrice={prices?.[signal.symbol]?.price}
-                          liveChange={prices?.[signal.symbol]?.change24h}
-                          isPinned={pinnedSymbols.includes(signal.symbol)}
-                          onTogglePin={(sym) => setPinnedSymbols(togglePinned(sym))}
-                        />
-                      </div>
-                    ));
-                  })()}
-                </div>
+                (() => {
+                  const ENTRY_WINDOW_MS = 60 * 60 * 1000; // 60 minutes
+                  const now = Date.now();
+
+                  const sorted = [...filteredSignals].sort((a, b) => {
+                    const ap = pinnedSymbols.includes(a.symbol) ? 0 : 1;
+                    const bp = pinnedSymbols.includes(b.symbol) ? 0 : 1;
+                    if (ap !== bp) return ap - bp;
+                    return b.score - a.score;
+                  });
+
+                  const primeEntries = sorted.filter(s => {
+                    if (s.tp1Hit) return false;
+                    const created = s.createdAt ? (typeof s.createdAt === 'string' ? new Date(s.createdAt).getTime() : s.createdAt) : 0;
+                    return (now - created) <= ENTRY_WINDOW_MS;
+                  });
+
+                  const inProgress = sorted.filter(s => {
+                    if (s.tp1Hit) return true;
+                    const created = s.createdAt ? (typeof s.createdAt === 'string' ? new Date(s.createdAt).getTime() : s.createdAt) : 0;
+                    return (now - created) > ENTRY_WINDOW_MS;
+                  });
+
+                  const renderCard = (signal, i) => (
+                    <div key={signal.symbol} style={{ animationDelay: `${(i % 10) * 50}ms` }} className="animate-fadeSlide">
+                      <SignalCard
+                        signal={signal}
+                        livePrice={prices?.[signal.symbol]?.price}
+                        liveChange={prices?.[signal.symbol]?.change24h}
+                        isPinned={pinnedSymbols.includes(signal.symbol)}
+                        onTogglePin={(sym) => setPinnedSymbols(togglePinned(sym))}
+                      />
+                    </div>
+                  );
+
+                  return (
+                    <div className="space-y-8">
+                      {/* ── PRIME ENTRIES ── */}
+                      {primeEntries.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="flex items-center gap-2">
+                              <span className="relative flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                              </span>
+                              <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-widest">🔥 Prime Entries</h3>
+                            </div>
+                            <span className="text-xs text-gray-500 font-mono">{primeEntries.length} signal{primeEntries.length !== 1 ? 's' : ''} • entry window open</span>
+                            <div className="flex-1 h-px bg-emerald-900/40"></div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {primeEntries.map(renderCard)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── IN PROGRESS ── */}
+                      {inProgress.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="flex items-center gap-2">
+                              <span className="relative flex h-2 w-2">
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-gray-500"></span>
+                              </span>
+                              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">👀 Monitoring</h3>
+                            </div>
+                            <span className="text-xs text-gray-600 font-mono">{inProgress.length} signal{inProgress.length !== 1 ? 's' : ''} • entry window closed</span>
+                            <div className="flex-1 h-px bg-gray-800/60"></div>
+                          </div>
+                          <p className="text-xs text-gray-600 mb-3 font-mono">Entry window has closed on these signals. Monitor for TP targets — do not enter new positions.</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 opacity-80">
+                            {inProgress.map(renderCard)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Edge case: all matched but nothing slotted (shouldn't happen) */}
+                      {primeEntries.length === 0 && inProgress.length === 0 && (
+                        <p className="text-gray-500 text-sm text-center py-12">No signals to display.</p>
+                      )}
+                    </div>
+                  );
+                })()
               )}
             </div>
 

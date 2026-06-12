@@ -1,0 +1,4 @@
+==================================================
+TODO FEATURES
+--------------------------------------------------
+- Binance: Add automated trade execution (via authenticated API keys) based on the generated signals.
