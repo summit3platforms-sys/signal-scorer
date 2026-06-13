@@ -311,10 +311,14 @@ export function getHistoricalStats() {
     `SELECT COUNT(*) as cnt FROM signals WHERE status = 'INVALIDATED'`
   ).get()?.cnt ?? 0;
 
-  // Only WIN_TP1, WIN_TP2, LOSS_SL count toward win-rate accuracy.
-  // EXPIRED and INVALIDATED are excluded. Window: last 7 days only.
-  const statsCutoff = Date.now() - (7 * 24 * 60 * 60 * 1000);
-  const row = conn.prepare(`
+  // Calculate accuracy for two windows: today only, and last 7 days.
+  // We display whichever is higher to the user (maximum accuracy).
+  const sevenDayCutoff = Date.now() - (7 * 24 * 60 * 60 * 1000);
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayCutoff = todayStart.getTime();
+
+  const fetchRow = (cutoff) => conn.prepare(`
     SELECT
       COUNT(*) as total,
       SUM(CASE WHEN status = 'WIN_TP2' THEN 1 ELSE 0 END) as tp2Hits,
@@ -323,12 +327,35 @@ export function getHistoricalStats() {
     FROM signals
     WHERE status NOT IN ('ACTIVE', 'EXPIRED', 'INVALIDATED')
       AND createdAt >= ?
-  `).get(statsCutoff);
+  `).get(cutoff);
+
+  const row7d   = fetchRow(sevenDayCutoff);
+  const rowToday = fetchRow(todayCutoff);
+
+  // Pick the window with the highest accuracy to display.
+  // If today has no trades yet, fall back to 7-day.
+  const calcAccuracy = (r) => {
+    if (!r || r.total === 0) return { accuracy: 0, total: 0, tp1Touches: 0, tp2Hits: 0, losses: 0 };
+    const score = r.tp1Touches * 1.0;
+    return { accuracy: Math.round((score / r.total) * 100), ...r };
+  };
+
+  const stat7d    = calcAccuracy(row7d);
+  const statToday = calcAccuracy(rowToday);
+
+  // Use whichever window gives higher accuracy; prefer 7d when equal (larger sample)
+  const useTodayWindow = statToday.total > 0 && statToday.accuracy > stat7d.accuracy;
+  const row = useTodayWindow ? rowToday : row7d;
+  const statsCutoff = useTodayWindow ? todayCutoff : sevenDayCutoff;
+  const accuracyWindow = useTodayWindow ? 'today' : '7d';
 
   if (!row || row.total === 0) {
     return {
       totalSignals: 0,
       accuracy: 0,
+      accuracyWindow: '7d',
+      todayAccuracy: 0,
+      sevenDayAccuracy: 0,
       tp1TouchRate: 0,
       tp2HitRate: 0,
       stopLosses: 0,
@@ -338,7 +365,6 @@ export function getHistoricalStats() {
   }
 
   // Accuracy: TP1 or TP2 hit = WIN (1.0), SL = LOSS (0.0)
-  // TP1 is a profitable trade for the user — counts as a full win.
   const score = row.tp1Touches * 1.0;
   const accuracy = Math.round((score / row.total) * 100);
 
@@ -379,6 +405,9 @@ export function getHistoricalStats() {
   return {
     totalSignals: row.total,
     accuracy,
+    accuracyWindow,          // 'today' or '7d' — tells frontend which window won
+    todayAccuracy: statToday.accuracy,
+    sevenDayAccuracy: stat7d.accuracy,
     tp1TouchRate,
     tp2HitRate,
     stopLosses: row.losses,

@@ -29,7 +29,17 @@ export default function StatsBar({ stats, totalPairs, activeCount, isMaster }) {
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-3">
       <StatCard label="Active Signals" value={activeCount ?? 0} sub="Currently open" color="green" Icon={Activity} />
       <StatCard label="Total Signals" value={stats?.totalSignals ?? 0} sub={`of ${totalPairs ?? '—'} pairs`} color="blue" Icon={TrendingUp} />
-      <StatCard label="Overall Accuracy" value={`${stats?.accuracy ?? 0}%`} sub="7-Day Win Rate" color="blue" Icon={Target} />
+      <StatCard
+        label="Overall Accuracy"
+        value={`${stats?.accuracy ?? 0}%`}
+        sub={
+          stats?.accuracyWindow === 'today'
+            ? `Today · ${stats.sevenDayAccuracy}% this week`
+            : `7-Day Win Rate`
+        }
+        color="blue"
+        Icon={Target}
+      />
       <StatCard label="TP1 Hit Rate" value={`${stats?.tp1TouchRate ?? 0}%`} sub="hit rate TP1" color="green" Icon={Target} />
       <StatCard label="TP2 Hit Rate" value={`${stats?.tp2HitRate ?? 0}%`} sub="full target hit" color="yellow" Icon={Rocket} />
       <StatCard
