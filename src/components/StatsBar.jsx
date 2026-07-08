@@ -34,8 +34,10 @@ export default function StatsBar({ stats, totalPairs, activeCount, isMaster }) {
         value={`${stats?.accuracy ?? 0}%`}
         sub={
           stats?.accuracyWindow === 'today'
-            ? `Today · ${stats.sevenDayAccuracy}% this week`
-            : `7-Day Win Rate`
+            ? `Today · ${stats.sevenDayAccuracy ?? 0}% (7d)`
+            : stats?.accuracyWindow === '7d'
+            ? `7-Day Win Rate`
+            : `30-Day Win Rate`
         }
         color="blue"
         Icon={Target}
