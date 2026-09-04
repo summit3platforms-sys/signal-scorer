@@ -28,7 +28,7 @@ export default function StatsBar({ stats, totalPairs, activeCount, isMaster }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-3">
       <StatCard label="Active Signals" value={activeCount ?? 0} sub="Currently open" color="green" Icon={Activity} />
-      <StatCard label="Total Signals" value={stats?.totalSignals ?? 0} sub={`of ${totalPairs ?? '—'} pairs`} color="blue" Icon={TrendingUp} />
+      <StatCard label="Total Signals" value={stats?.totalSignals ?? 0} sub="SNDKUSDT only" color="blue" Icon={TrendingUp} />
       <StatCard
         label="Overall Accuracy"
         value={`${stats?.accuracy ?? 0}%`}

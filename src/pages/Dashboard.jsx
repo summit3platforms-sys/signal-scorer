@@ -128,9 +128,9 @@ export default function Dashboard() {
               {scanStatus.scanDurationMs > 0 && ` (took ${Math.round(scanStatus.scanDurationMs / 1000)}s)`}
             </span>
 
-            {scanStatus.totalPairs > 0 && (
+            {scanStatus.totalPairs >= 0 && (
               <span className="text-xs bg-[#1e2d40] text-gray-400 px-2 py-0.5 rounded-full font-mono">
-                {scanStatus.totalPairs} pairs
+                SNDKUSDT
               </span>
             )}
 
@@ -296,7 +296,7 @@ export default function Dashboard() {
               {scanStatus.isScanning && filteredSignals.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4">
                   <RefreshCw className="animate-spin text-[#00d4aa]" size={32} />
-                  <p className="text-gray-500 text-sm">Scanning {scanStatus.totalPairs || '—'} pairs…</p>
+                  <p className="text-gray-500 text-sm">Scanning SNDKUSDT…</p>
                 </div>
               ) : filteredSignals.length === 0 ? (
                 <motion.div 

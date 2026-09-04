@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { startPriceStream, getStreamReadyState } from '../lib/priceStream.js';
-import { getTopSymbolsByVolume, getMultipleKlines, getAllTickers, getCurrentWeight, getFundingRates } from '../lib/binance.js';
+import { getMultipleKlines, getAllTickers, getCurrentWeight, getFundingRates } from '../lib/binance.js';
 import { SignalScoringEngine } from '../signal-engine/SignalScoringEngine.js';
 import { sendAlert } from '../lib/telegram.js';
 import { setSignals, getSignals } from './cache.js';
@@ -9,9 +9,8 @@ import { checkExpiredSubscriptions } from './services/auth.js';
 
 let isScanning = false;
 
-// How many top-volume pairs to scan (keeps weight usage safe)
-// 150 pairs × 2 intervals × 1 weight = ~300 weight per scan
-const SCAN_LIMIT = 150;
+// Single-pair mode: only scan SNDKUSDT
+const WATCH_SYMBOLS = ['SNDKUSDT'];
 // Kline batch size — 5 at a time with 200ms delay
 const BATCH_SIZE = 5;
 
@@ -38,17 +37,16 @@ export async function runFullScan(io) {
   const t0 = Date.now();
 
   if (io) io.emit('scan:started', { timestamp: t0 });
-  logScanStep(io, `[Scanner] Starting scan (top ${SCAN_LIMIT} pairs by volume)...`);
+  logScanStep(io, `[Scanner] Starting scan for ${WATCH_SYMBOLS.join(', ')}...`);
 
   try {
     const dbSettings = getSettings();
     const engine = new SignalScoringEngine({}, dbSettings);
 
-    // Step 1: Get top N symbols by 24h quote volume
-    logScanStep(io, `[Scanner] Step 1: Fetching top ${SCAN_LIMIT} symbols by volume...`);
-    const symbols = await getTopSymbolsByVolume(SCAN_LIMIT);
+    // Step 1: Use fixed single-pair watchlist
+    const symbols = WATCH_SYMBOLS;
     const totalPairs = symbols.length;
-    logScanStep(io, `[Scanner] Found ${totalPairs} USDT-margined perpetual pairs.`);
+    logScanStep(io, `[Scanner] Step 1: Watching ${symbols.join(', ')} (${totalPairs} pair).`);
 
     if (io) io.emit('scan:progress', { scanned: 0, total: totalPairs, percent: 0 });
 
